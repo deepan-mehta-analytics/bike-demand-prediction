@@ -117,9 +117,21 @@ bike-demand-prediction/
 
 ---
 
-## ▶️ How to Run  
+## ▶️ How to Run
 
-### Run Shiny App  
+### 📌 Quick Start (Recommended)
+
+### 1. Clone the repository:
+
+```bash
+git clone https://github.com/deepan-mehta-analytics/bike-demand-prediction.git
+cd bike-demand-prediction
+```
+### 2. Set your OpenWeather API key:
+```bash
+Sys.setenv(OPENWEATHER_API_KEY="your_api_key")
+```
+### 3. Run Shiny App  
 
 ```r
 setwd("shiny_app")
@@ -128,7 +140,7 @@ shiny::runApp()
 
 ---
 
-## 🔑 API Setup  
+## 🔑 API Setup  ( see Step 2 above)
 
 ```r
 Sys.setenv(OPENWEATHER_API_KEY="your_api_key")
