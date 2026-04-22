@@ -26,7 +26,17 @@ It integrates:
 - Interactive dashboard deployment  
 
 ---
+## ⚙️ Tech Stack Summary
 
+- **Primary Implementation:** R (IBM Capstone-aligned)
+- **Parallel Implementation:** Python (equivalent pipeline)
+- **Modeling:** Linear Regression (weather-based demand prediction)
+- **Data Sources:**
+  - Wikipedia (web scraping)
+  - OpenWeather API (forecast data)
+  - Seoul Bike Sharing dataset (historical demand)
+- **Visualization:** ggplot2, Leaflet (Shiny Dashboard)
+---
 ## 🎯 Business Problem  
 
 Bike-sharing systems require efficient allocation of resources based on demand.
