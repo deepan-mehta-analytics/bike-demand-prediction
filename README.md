@@ -162,7 +162,7 @@ Sys.setenv(OPENWEATHER_API_KEY="your_api_key")
 
 **Deepan Mehta**  
 
-- Data Analytics → Data Engineering → MLOps  
+- Data Analytics → Data Engineering → AI/ML Engineering  
 - Focused on building end-to-end data systems combining analytics, machine learning, and deployment  
 - Experience in ETL pipelines, predictive modeling, and interactive dashboards  
 
