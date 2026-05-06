@@ -470,7 +470,7 @@ Focused on building end-to-end data systems combining analytics, machine learnin
 
 1. Sathishkumar V.E., Park J., Cho Y. (2020). *Using data mining techniques for bike sharing demand prediction in metropolitan city.* Computer Communications, 153, 353–366.
 2. Seoul Bike Sharing Demand Dataset — UCI Machine Learning Repository
-3. Luo Y., Grossman J. et al. — IBM Skills Network / Coursera: *Applied Data Science Capstone with R*
+3. Luo Y., Grossman J., Ahuja R. et al. — IBM Skills Network / Coursera: *IBM Data Analytics Professional with Excel and R*
 4. OpenWeather 5-Day Forecast API — https://openweathermap.org/forecast5
 
 ---
