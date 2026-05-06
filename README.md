@@ -209,8 +209,7 @@ bike-demand-prediction/
 │       └── 11_shiny_dashboard_integration_R.ipynb
 │
 ├── reports/
-│   ├── Applied_Data_Science_with_R_Capstone_project.pdf   # Final presentation
-│   └── Capstone_Slide_Content_Reference.docx
+│   └── Applied_Data_Science_with_R_Capstone_project.pdf   ← capstone presentation (PDF)
 │
 ├── results/
 │   ├── models/
