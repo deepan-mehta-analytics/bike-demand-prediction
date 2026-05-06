@@ -37,15 +37,15 @@ The R pipeline benchmarks six model classes on a chronological 80/20 held-out sp
 
 ## ⚙️ Tech Stack
 
-| Layer | R | Python |
-|-------|---|--------|
-| Data wrangling | tidyverse (dplyr, tidyr, stringr) | pandas, numpy |
-| Database / SQL | RSQLite, DBI | sqlite3, sqlalchemy |
-| Modelling | caret, glmnet, randomForest | scikit-learn |
-| Visualisation | ggplot2, Leaflet | matplotlib, seaborn, plotly |
-| API | httr | requests |
-| Dashboard | R Shiny, shinythemes, shinyjs | — |
-| IDE | JupyterLab, RStudio | JupyterLab |
+| Layer | Tool | Purpose |
+|-------|------|---------|
+| Data wrangling | dplyr, tidyr, stringr (R) · pandas, numpy (Py) | Reshape, filter, and clean tabular data |
+| Database / SQL | RSQLite, DBI (R) · sqlite3, sqlalchemy (Py) | Local SQLite storage and SQL EDA |
+| Modelling | caret, glmnet, randomForest (R) · scikit-learn (Py) | Regularised regression, cross-validation, Random Forest |
+| Visualisation | ggplot2, Leaflet (R) · matplotlib, seaborn, plotly (Py) | Statistical plots and interactive maps |
+| API integration | httr (R) · requests (Py) | OpenWeather 5-day forecast fetch |
+| Dashboard | R Shiny, shinythemes, shinyjs | Live Bikecast 24-hr demand web app |
+| Development | RStudio, JupyterLab | Notebook authoring and Shiny development |
 
 ---
 
@@ -141,7 +141,7 @@ This separation reflects real-world machine learning workflows, where experiment
 ![City Drilldown](results/screenshots/city_drilldown.png)
 
 ### 📈 Temperature Trend
-![Temperature Trend](results/screenshots/temparature_trend.png)
+![Temperature Trend](results/screenshots/temperature_trend.png)
 
 ### 🚲 Bike Demand Forecast — Next 24 Hours
 ![Demand Forecast](results/screenshots/bike_demand_next_24_hrs.png)
@@ -422,7 +422,7 @@ The capstone presentation covers the full pipeline from data collection through 
 - **Lasso / Elastic Net over-penalised on Python track** — both produce negative R² at α=0.1 on the normalised target, indicating regularisation is too aggressive at that scale
 - **IBM model scored on Track 2 test set** — RMSE 342.60, R² 0.6723; see IBM Deployed Model section for full comparison
 - **OpenWeather free tier limits** — new API keys take up to 2 hours to activate; rate limits apply at scale
-- **No dependency manifests** — `requirements.txt` (Python) and `renv.lock` (R) are not included; package versions are not pinned
+- **R package versions not pinned** — `renv.lock` is not included; R package versions are unpinned. Python packages are pinned via `requirements.txt`
 
 ---
 

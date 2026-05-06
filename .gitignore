@@ -5,5 +5,8 @@
 .DS_Store
 .ipynb_checkpoints/
 
+# Claude Code tooling — local session config, not project artefacts
+.claude/
+
 # Large model binaries — store locally or in cloud storage, not in git
 *.pkl
