@@ -365,7 +365,12 @@ Restart R. New keys can take up to **2 hours** to activate on OpenWeather's free
 
 ### 3. Install dependencies
 
-**R packages:**
+**R packages (recommended — uses pinned versions from `renv.lock`):**
+```r
+renv::restore()
+```
+
+**R packages (alternative — installs latest CRAN versions):**
 ```r
 source("install_packages.R")
 ```
@@ -422,7 +427,7 @@ The capstone presentation covers the full pipeline from data collection through 
 - **Lasso / Elastic Net over-penalised on Python track** — both produce negative R² at α=0.1 on the normalised target, indicating regularisation is too aggressive at that scale
 - **IBM model scored on Track 2 test set** — RMSE 342.60, R² 0.6723; see IBM Deployed Model section for full comparison
 - **OpenWeather free tier limits** — new API keys take up to 2 hours to activate; rate limits apply at scale
-- **R package versions not pinned** — `renv.lock` is not included; R package versions are unpinned. Python packages are pinned via `requirements.txt`
+- **renv library not included** — `renv/library/` is gitignored (platform-specific binaries); run `renv::restore()` to rebuild the local library from `renv.lock`
 
 ---
 
@@ -432,7 +437,7 @@ The capstone presentation covers the full pipeline from data collection through 
 - [ ] Convert Python RMSE back to original scale for cross-track comparability
 - [x] `requirements.txt` added (Python); `install_packages.R` added (R)
 - [x] IBM model scored against held-out test set — RMSE 342.60, R² 0.6723
-- [ ] Pin R packages via `renv::snapshot()` to generate `renv.lock`
+- [x] Pin R packages via `renv::snapshot()` — `renv.lock` generated (R 4.4.3, 120+ packages pinned)
 - [ ] Containerise Shiny app (Docker) for portable deployment
 - [ ] Extend city coverage beyond the current five
 
