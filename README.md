@@ -260,19 +260,20 @@ Top predictors by importance: temperature, hour, dew point temperature, humidity
 *Track 1 · `notebooks/Python/08_model_selection_py.ipynb` · `results/models/final_bike_demand_model.pkl`*
 
 Trained on the normalised Seoul dataset using a chronological 80/20 split and serialised via joblib.
-RMSE values are in normalised units and are not directly comparable to Track 2 figures.
+The ETL stage applies min-max scaling to all numeric columns; RMSE values below are reported in original units (bikes/hr) via inverse transform: `x = x_norm × (y_max − y_min) + y_min` (y_min=2, y_max=3556).
 
-| Model | Test R² | Test RMSE (normalised) |
-|-------|---------|------------------------|
-| Polynomial (degree=2) | 0.271 | 0.130 |
-| Ridge | 0.430 | 0.115 |
-| Lasso | −0.077 | 0.159 |
-| Elastic Net | −0.077 | 0.159 |
-| **Random Forest ★** | **0.518** | **0.106** |
+| Model | Test R² | Test RMSE (bikes/hr) |
+|-------|---------|----------------------|
+| Polynomial (degree=2) | 0.271 | 462.0 |
+| Ridge | 0.430 | 408.7 |
+| Lasso | −0.077 | 565.1 |
+| Elastic Net | −0.077 | 565.1 |
+| **Random Forest ★** | **0.518** | **376.7** |
 
 Random Forest is the selected model. Lasso and Elastic Net produce negative R² at this
 regularisation strength (α=0.1), indicating over-penalisation on a normalised target.
-Track 2 achieves higher R² (0.730) through richer feature engineering and original-scale modelling.
+Track 2 achieves higher R² (0.730) and lower RMSE (333.89 bikes/hr) through richer feature
+engineering and original-scale modelling — a 42.8 bike/hr improvement over the Python RF.
 
 ### IBM Deployed Model
 *Track 3 · provided by IBM Skills Network · `data/processed/model.csv`*
@@ -423,7 +424,7 @@ The capstone presentation covers the full pipeline from data collection through 
 
 ## ⚠️ Known Limitations
 
-- **Python RMSE not comparable to R** — Python track normalises the target variable; RMSE figures (e.g. 0.106) are in normalised units and cannot be directly compared to R track RMSE (333.89 bikes/hr)
+- **Python RF weaker than R RF** — Python Random Forest achieves R²=0.518 / RMSE=376.7 bikes/hr vs R Track R²=0.730 / RMSE=333.89; gap is attributable to richer feature engineering and original-scale modelling in the R pipeline
 - **Lasso / Elastic Net over-penalised on Python track** — both produce negative R² at α=0.1 on the normalised target, indicating regularisation is too aggressive at that scale
 - **IBM model scored on Track 2 test set** — RMSE 342.60, R² 0.6723; see IBM Deployed Model section for full comparison
 - **OpenWeather free tier limits** — new API keys take up to 2 hours to activate; rate limits apply at scale
@@ -434,7 +435,7 @@ The capstone presentation covers the full pipeline from data collection through 
 ## 🔜 Roadmap
 
 - [ ] Add pytest / testthat unit tests for ETL and model evaluation functions
-- [ ] Convert Python RMSE back to original scale for cross-track comparability
+- [x] Convert Python RMSE to original scale — inverse min-max transform applied; RF RMSE 376.7 bikes/hr
 - [x] `requirements.txt` added (Python); `install_packages.R` added (R)
 - [x] IBM model scored against held-out test set — RMSE 342.60, R² 0.6723
 - [x] Pin R packages via `renv::snapshot()` — `renv.lock` generated (R 4.4.3, 120+ packages pinned)
