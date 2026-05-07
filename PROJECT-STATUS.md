@@ -11,8 +11,8 @@ Both repos form a single portfolio system. Track them together here.
 
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
-| **bike_demand_prediction** (this repo) | R Shiny dashboard | Phase 7H Containerisation + city routing | ✅ Complete | `dc9404b` |
-| **bike-demand-ml-system** | Python FastAPI + ML training | Phase 2 Multi-City | ✅ Complete | `7985cf3` |
+| **bike_demand_prediction** (this repo) | R Shiny dashboard | v1.1 shipped — Phases 7A–7H complete | ✅ Complete | `b39cede` |
+| **bike-demand-ml-system** | Python FastAPI + ML training | Phase 2 Multi-City + CI fixes | ✅ Complete | `1ae284f` |
 
 ### Trained City Models (Python repo)
 

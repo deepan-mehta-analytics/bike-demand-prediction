@@ -8,7 +8,7 @@ This project delivers a full-stack predictive analytics system for bike-sharing 
 
 The R pipeline benchmarks six model classes on a chronological 80/20 held-out split, achieving a Random Forest with R²=0.730 (RMSE 333.89 bikes/hr) — a 39% improvement over the baseline linear model. The Bikecast Shiny dashboard provides live 24-hour demand forecasts for five global cities rendered on an interactive Leaflet map, with city drill-down showing live GBFS station availability markers, demand-band filtering, and expand-to-modal charts.
 
-**v1.1 is in active development.** Phase 7 extends the dashboard into two real end-user tools: an **Operator tab** (fleet rebalancing alerts, demand vs. station capacity) and a **Rider tab** (live availability score, best-time recommendation, natural-language summary). The prediction backend is being upgraded to a Python FastAPI inference service (RF RMSE 173 bikes/hr) and a GCP-ready streaming pipeline: GBFS live feeds → Pub/Sub topic → Dataflow pipeline → BigQuery.
+**v1.1 is shipped.** Phase 7 extended the dashboard into two real end-user tools: an **Operator tab** (fleet rebalancing alerts, demand vs. station capacity) and a **Rider tab** (live availability score, best-time recommendation, natural-language summary). The prediction backend is upgraded to a Python FastAPI inference service (RF RMSE 173 bikes/hr) replacing the linear model.csv; Docker Compose runs the full stack locally. Next: **GCP streaming pipeline** — GBFS live feeds → Pub/Sub → Dataflow → BigQuery (v1.2, Phase 7F).
 
 ### End-to-end ML pipeline: raw Seoul data → six competing models → live global demand forecast
 
@@ -21,8 +21,8 @@ The R pipeline benchmarks six model classes on a chronological 80/20 held-out sp
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Shiny](https://img.shields.io/badge/Shiny-1F77B4?style=for-the-badge)
 ![Machine Learning](https://img.shields.io/badge/Machine%20Learning-Regression-orange?style=for-the-badge)
-![Status](https://img.shields.io/badge/v1.0.0-Released-success?style=for-the-badge)
-![Status](https://img.shields.io/badge/v1.1-In%20Development-blue?style=for-the-badge)
+![Status](https://img.shields.io/badge/v1.1-Released-success?style=for-the-badge)
+![Status](https://img.shields.io/badge/v1.2-In%20Development-blue?style=for-the-badge)
 ![API](https://img.shields.io/badge/API-OpenWeather-blue?style=for-the-badge)
 ![IBM](https://img.shields.io/badge/IBM-Data%20Analytics%20Capstone-054ADA?style=for-the-badge&logo=ibm&logoColor=white)
 
@@ -241,7 +241,7 @@ bike-demand-prediction/
 │   └── screenshots/
 │       ├── dashboard_overview.png
 │       ├── city_drilldown.png
-│       ├── temparature_trend.png
+│       ├── temperature_trend.png
 │       ├── bike_demand_next_24_hrs.png
 │       └── humidity_vs_demand.png
 │
@@ -358,11 +358,14 @@ A professional three-column dashboard built on the **Yeti Bootswatch** theme.
 - City comparison bar chart + summary table in the global overview
 - **Live GBFS station markers** — city drill-down shows individual stations coloured by current available bike count (green ≥ 5 / yellow 1–4 / red 0); popups show station name, bikes available, free docks, and capacity *(Phase 7B)*
 
-**Features (v1.1 — in development):**
-- **Operator tab (UC1)** — fleet rebalancing alerts, demand vs. station capacity heatmap, CSV export of 24-hr forecast *(Phase 7D)*
-- **Rider tab (UC2)** — demand score (Low / Medium / High) for next 3 hours, best-time-to-ride recommendation, natural-language availability summary *(Phase 7E)*
-- **FastAPI prediction engine** — RF model (RMSE 173 bikes/hr) replaces linear model.csv; 2× accuracy improvement; `USE_FASTAPI` env var switches engines *(Phase 7C)*
-- **Docker Compose deployment** — `docker compose up` runs the full Shiny + FastAPI stack locally *(Phase 7H)*
+**Features (v1.1 — shipped):**
+- **FastAPI prediction engine** — RF model (RMSE 173 bikes/hr) replaces linear model.csv; 2× accuracy improvement; `USE_FASTAPI` env var switches engines *(Phase 7C ✅)*
+- **Operator tab (UC1)** — fleet rebalancing alerts, demand vs. station capacity heatmap, CSV export of 24-hr forecast *(Phase 7D ✅)*
+- **Rider tab (UC2)** — demand score (Low / Medium / High) for next 3 hours, best-time-to-ride recommendation, natural-language availability summary *(Phase 7E ✅)*
+- **Docker Compose deployment** — `docker compose up` runs the full Shiny + FastAPI stack locally *(Phase 7H ✅)*
+
+**In development (v1.2):**
+- **GCP Streaming Pipeline** — GBFS feeds → Pub/Sub → Dataflow → BigQuery *(Phase 7F)*
 - **Seoul live stations** — GBFS integration pending Seoul Open API key registration
 
 **Demand bands:**
