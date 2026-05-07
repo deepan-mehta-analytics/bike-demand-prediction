@@ -6,7 +6,7 @@
 
 This project delivers a full-stack predictive analytics system for bike-sharing demand forecasting, built across two independent language tracks (R and Python) as part of the IBM Applied Data Science with R Capstone. Starting from raw Seoul city data, the system spans ETL pipelines, SQL-based exploratory analysis, multi-model regression benchmarking, and a live Shiny dashboard fed by real-time OpenWeather API data.
 
-The R pipeline benchmarks six model classes on a chronological 80/20 held-out split, achieving a Random Forest with R²=0.730 (RMSE 333.89 bikes/hr) — a 39% improvement over the baseline linear model. The Bikecast Shiny dashboard provides live 24-hour demand forecasts for five global cities rendered on an interactive Leaflet map, with city drill-down showing live GBFS station availability markers, demand-band filtering, and expand-to-modal charts.
+The R pipeline benchmarks six model classes on a chronological 80/20 held-out split, achieving a Random Forest with R²=0.730 (RMSE 333.89 bikes/hr) — a 39% improvement over the baseline linear model. The Bikecast Shiny dashboard provides live 24-hour demand forecasts for six global cities rendered on an interactive Leaflet map, with city drill-down showing live GBFS station availability markers, demand-band filtering, and expand-to-modal charts.
 
 **v1.1 is shipped.** Phase 7 extended the dashboard into two real end-user tools: an **Operator tab** (fleet rebalancing alerts, demand vs. station capacity) and a **Rider tab** (live availability score, best-time recommendation, natural-language summary). The prediction backend is upgraded to a Python FastAPI inference service (RF RMSE 173 bikes/hr) replacing the linear model.csv; Docker Compose runs the full stack locally. Next: **GCP streaming pipeline** — GBFS live feeds → Pub/Sub → Dataflow → BigQuery (v1.2, Phase 7F).
 
@@ -183,7 +183,7 @@ bike-demand-prediction/
 ├── data/
 │   ├── raw/
 │   │   ├── seoul_bike_sharing.csv              # Original Seoul dataset (UCI)
-│   │   └── selected_cities.csv                 # 5 peer cities with lat/lng
+│   │   └── selected_cities.csv                 # 6 cities with lat/lng (Seoul, London, NYC, Paris, Chicago, Washington DC)
 │   └── processed/
 │       ├── clean_bike_data.csv                 # Wrangled, complete-case dataset
 │       └── model.csv                           # IBM-provided model (used by Shiny app)
@@ -506,7 +506,7 @@ The capstone presentation covers the full pipeline from data collection through 
 - [x] Add MIT LICENSE (2026, Deepan Mehta)
 - [x] Add GitHub Actions CI — Python + R smoke tests, `model.csv` integrity check
 
-### 🔄 v1.1 — In Development
+### ✅ v1.1 — Shipped
 
 #### Phase 7A — City Replacement ✅
 - [x] Replace Suzhou (no GBFS) with Chicago (Divvy GBFS v2)
@@ -550,7 +550,8 @@ The capstone presentation covers the full pipeline from data collection through 
 
 - [ ] pytest / testthat unit tests for ETL and model evaluation functions
 - [ ] Seoul GBFS integration (free API key at data.seoul.go.kr)
-- [ ] Expand to 8 cities (Washington DC, San Francisco, or Amsterdam)
+- [x] Washington DC added — Capital Bikeshare GBFS v2, RF model RMSE 97.47 bikes/hr
+- [ ] Expand further — San Francisco (Ford GoBike) or Amsterdam (OV-fiets)
 
 ---
 
