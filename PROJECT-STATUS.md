@@ -11,8 +11,8 @@ Both repos form a single portfolio system. Track them together here.
 
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
-| **bike_demand_prediction** (this repo) | R Shiny dashboard | DC city addition — 6 cities | 🔄 In Progress | `e837b8e` |
-| **bike-demand-ml-system** | Python FastAPI + ML training | DC city addition — slug map + prep scripts | 🔄 In Progress | `cbe1c00` |
+| **bike_demand_prediction** (this repo) | R Shiny dashboard | Phase 7H complete — 6 cities | ✅ Done | `e837b8e` |
+| **bike-demand-ml-system** | Python FastAPI + ML training | Phase 2 complete — 4 cities trained | ✅ Done | `0bf53af` |
 
 ### Trained City Models (Python repo)
 
@@ -21,7 +21,7 @@ Both repos form a single portfolio system. Track them together here.
 | Seoul | **173.21** | TEMPERATURE (0.34) | Seoul | `artifacts/seoul/` |
 | London | **228.58** | HOUR (0.71) | London | `artifacts/london/` |
 | NYC | **345.69** | HOUR (0.52) | New York | `artifacts/nyc/` |
-| Washington DC | **pending** | — | Washington DC | `artifacts/dc/` 🔲 |
+| Washington DC | **97.47** | HOUR (0.61) | Washington DC | `artifacts/dc/` ✅ |
 | Paris | — | — (Seoul fallback) | Paris | Seoul proxy |
 | Chicago | — | — (Seoul fallback) | Chicago | Seoul proxy |
 
