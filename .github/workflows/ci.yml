@@ -96,11 +96,12 @@ jobs:
       - name: Restore renv library
         shell: bash
         run: |
-          # setup-r sets RENV_CONFIG_REPOS_OVERRIDE=PPM-only; clear it so renv can fall back to CRAN
-          # for packages absent from PPM's Noble binary index (bit64 4.6.0, RSQLite 2.4.3, etc.)
+          # setup-r sets RENV_CONFIG_REPOS_OVERRIDE=PPM-only in the shell environment;
+          # unset it HERE in bash before Rscript starts — renv reads this env var during
+          # source('renv/activate.R'), so clearing it inside R (Sys.unsetenv) is too late
+          unset RENV_CONFIG_REPOS_OVERRIDE                                   # clear PPM-only flag before R starts
           Rscript -e "
           source('renv/activate.R')                                         # bootstrap renv from lockfile version
-          Sys.unsetenv('RENV_CONFIG_REPOS_OVERRIDE')                        # clear PPM-only override
           options(repos = c(                                                 # set dual-repo strategy:
             PPM  = 'https://packagemanager.posit.co/cran/__linux__/noble/latest',  # PPM first — fast Ubuntu binaries
             CRAN = 'https://cloud.r-project.org'                            # CRAN fallback — source for PPM gaps
