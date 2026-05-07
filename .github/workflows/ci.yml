@@ -141,10 +141,12 @@ jobs:
           cat('model.csv OK:', nrow(df), 'rows,', ncol(df), 'cols\n')
           "
 
-  # ── Job 3: Docker Compose build smoke test ─────────────────────────────────
+  # ── Job 3: Docker build smoke test ──────────────────────────────────────────
   # Validates that Dockerfile.shiny builds successfully on every push.
-  # Builds ONLY the shiny service — fastapi is skipped because its build context
-  # (../bike-demand-ml-system) is a sibling repo not present in this CI checkout.
+  # Uses docker/build-push-action with GitHub Actions cache so the expensive
+  # renv::restore() layer (~73 packages) is served from cache on subsequent runs
+  # when renv.lock is unchanged.  First run after a cache miss is still slow;
+  # subsequent runs drop from ~10–35 min to < 2 min.
   docker-compose-build:
     name: Docker — build Shiny service                   # label shown in the Actions UI
     runs-on: ubuntu-latest                               # GitHub-hosted Ubuntu 24.04 runner
@@ -153,7 +155,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4                        # clone repo at current ref
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3              # enables BuildKit + GHA cache backend
+
       - name: Build Shiny Docker image
-        run: docker compose build shiny                  # builds Dockerfile.shiny via docker-compose.yml
-        env:
-          OPENWEATHER_KEY: ci_placeholder                # not used at build time; suppresses compose variable warning
+        uses: docker/build-push-action@v6
+        with:
+          context: .                                     # build context is repo root (renv.lock, data/, shiny_app/)
+          file: Dockerfile.shiny                         # explicit Dockerfile path
+          push: false                                    # smoke test only — do not push to any registry
+          cache-from: type=gha                           # restore image layers from GitHub Actions cache
+          cache-to: type=gha,mode=max                    # write all layers back to GHA cache after build
