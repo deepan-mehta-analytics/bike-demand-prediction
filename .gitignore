@@ -10,3 +10,6 @@
 
 # Large model binaries — store locally or in cloud storage, not in git
 *.pkl
+
+# NotebookLM PKB documents — local study materials, not repo artefacts
+notebooklm/
