@@ -14,6 +14,7 @@ The R pipeline benchmarks six model classes on a chronological 80/20 held-out sp
 
 ## 🏷️ Project Badges
 
+[![CI](https://github.com/deepan-mehta-analytics/bike-demand-prediction/actions/workflows/ci.yml/badge.svg)](https://github.com/deepan-mehta-analytics/bike-demand-prediction/actions/workflows/ci.yml)
 ![R](https://img.shields.io/badge/R-276DC3?style=for-the-badge&logo=r&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Shiny](https://img.shields.io/badge/Shiny-1F77B4?style=for-the-badge)
@@ -438,7 +439,9 @@ The capstone presentation covers the full pipeline from data collection through 
 - [x] Convert Python RMSE to original scale — inverse min-max transform applied; RF RMSE 376.7 bikes/hr
 - [x] `requirements.txt` added (Python); `install_packages.R` added (R)
 - [x] IBM model scored against held-out test set — RMSE 342.60, R² 0.6723
-- [x] Pin R packages via `renv::snapshot()` — `renv.lock` generated (R 4.4.3, 120+ packages pinned)
+- [x] Pin R packages via `renv::snapshot()` — `renv.lock` generated (R 4.4.3, 139 packages pinned)
+- [x] Add MIT LICENSE (2026, Deepan Mehta)
+- [x] Add GitHub Actions CI — Python + R smoke tests, model.csv integrity check
 - [ ] Containerise Shiny app (Docker) for portable deployment
 - [ ] Extend city coverage beyond the current five
 
