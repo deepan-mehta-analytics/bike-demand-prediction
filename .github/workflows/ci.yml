@@ -86,17 +86,27 @@ jobs:
           r-version: "4.4.3"                             # pin to match renv.lock R version
           use-public-rspm: true                          # use Posit PPM for pre-built Ubuntu binaries
 
-      - name: Pre-install packages not yet in PPM binary index for Ubuntu Noble
+      - name: Cache renv packages
+        uses: actions/cache@v4                           # standard GitHub cache action
+        with:
+          path: ~/.cache/R/renv                          # renv's global package cache directory
+          key: ${{ runner.os }}-R-4.4.3-renv-3-${{ hashFiles('renv.lock') }}   # invalidate on lockfile change
+          restore-keys: ${{ runner.os }}-R-4.4.3-renv-3-                        # partial match for cache hit
+
+      - name: Restore renv library
         shell: bash
         run: |
-          # bit/bit64 4.6.0 and RSQLite 2.4.3 are absent from PPM's Noble binary index;
-          # install from CRAN source first so renv::restore() skips them
-          Rscript -e "install.packages(c('bit', 'bit64', 'RSQLite'), repos = 'https://cloud.r-project.org', type = 'source')"
-
-      - name: Restore renv library (with cache)
-        uses: r-lib/actions/setup-renv@v2
-        with:
-          cache-version: 2                               # bumped: lockfile and pre-install strategy changed
+          # setup-r sets RENV_CONFIG_REPOS_OVERRIDE=PPM-only; clear it so renv can fall back to CRAN
+          # for packages absent from PPM's Noble binary index (bit64 4.6.0, RSQLite 2.4.3, etc.)
+          Rscript -e "
+          source('renv/activate.R')                                         # bootstrap renv from lockfile version
+          Sys.unsetenv('RENV_CONFIG_REPOS_OVERRIDE')                        # clear PPM-only override
+          options(repos = c(                                                 # set dual-repo strategy:
+            PPM  = 'https://packagemanager.posit.co/cran/__linux__/noble/latest',  # PPM first — fast Ubuntu binaries
+            CRAN = 'https://cloud.r-project.org'                            # CRAN fallback — source for PPM gaps
+          ))
+          renv::restore()                                                    # restore all 139 packages
+          "
 
       - name: R library smoke test
         shell: bash                                       # explicit bash for heredoc syntax
