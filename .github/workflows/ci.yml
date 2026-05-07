@@ -75,6 +75,8 @@ jobs:
           sudo apt-get install -y libfontconfig1-dev libharfbuzz-dev libfribidi-dev libfreetype6-dev
           # R image format stack — required by png, tiff, jpeg device packages
           sudo apt-get install -y libpng-dev libtiff-dev libjpeg-dev
+          # R spatial/GIS stack — required by sf and units (pulled in by leaflet)
+          sudo apt-get install -y libudunits2-dev libgdal-dev libgeos-dev libproj-dev
 
       - name: Set up R 4.4.3
         uses: r-lib/actions/setup-r@v2
