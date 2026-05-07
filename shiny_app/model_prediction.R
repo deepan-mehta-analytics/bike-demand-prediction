@@ -342,6 +342,103 @@ predict_bike_demand <- function(TEMPERATURE, HUMIDITY, WIND_SPEED, VISIBILITY, S
 
 
 # -----------------------------------------------------------------------------
+# SECTION 5B — predict_bike_demand_fastapi()
+# -----------------------------------------------------------------------------
+# Alternative prediction engine: calls the Python FastAPI service
+# (bike-demand-ml-system repo) via HTTP POST instead of the local model.csv.
+#
+# Active when USE_FASTAPI env var == "true" (set in Docker Compose or shell).
+# Falls back silently to model.csv if FastAPI is unreachable — app never crashes.
+#
+# Arguments: vectors aligned to forecast rows (one element per row)
+#   FORECASTDATETIME — ISO datetime string; used to extract DATE and HOUR
+#   TEMPERATURE, HUMIDITY, WIND_SPEED, VISIBILITY — numeric weather fields
+#   SEASONS   — character vector: "SPRING"/"SUMMER"/"AUTUMN"/"WINTER" (uppercase)
+#   HOURS     — integer vector of hour-of-day (0–23)
+#
+# Returns: integer vector of predicted bike counts (same length as input)
+
+predict_bike_demand_fastapi <- function(FORECASTDATETIME, TEMPERATURE, HUMIDITY,
+                                        WIND_SPEED, VISIBILITY, SEASONS, HOURS) {
+
+  # ── Config ────────────────────────────────────────────────────────────────
+  fastapi_url <- Sys.getenv("FASTAPI_URL", unset = "http://localhost:8000")  # service endpoint; overridden by Docker Compose
+  predict_url <- paste0(fastapi_url, "/predict")                              # full POST path
+
+  # ── Season case conversion ─────────────────────────────────────────────────
+  # FastAPI was trained on Title Case seasons ("Winter") not uppercase ("WINTER")
+  season_map <- c(                          # named vector: uppercase → Title Case
+    SPRING = "Spring",                      # map SPRING → Spring
+    SUMMER = "Summer",                      # map SUMMER → Summer
+    AUTUMN = "Autumn",                      # map AUTUMN → Autumn
+    WINTER = "Winter"                       # map WINTER → Winter
+  )
+  seasons_titled <- unname(season_map[SEASONS])  # look up each season; drops names to keep plain vector
+
+  # ── Date extraction ────────────────────────────────────────────────────────
+  # FastAPI expects DATE as "DD/MM/YYYY"; FORECASTDATETIME is an ISO string
+  forecast_dates <- as.POSIXct(FORECASTDATETIME, tz = "UTC")                     # parse ISO string to datetime
+  date_strings   <- format(forecast_dates, "%d/%m/%Y")                           # reformat to DD/MM/YYYY
+
+  # ── Build request records ──────────────────────────────────────────────────
+  # FastAPI expects {"data": [{...}, {...}]} — one object per forecast row.
+  # Fields not available from OpenWeather (dew point, solar radiation, rainfall,
+  # snowfall) are passed as 0.0 — RF is insensitive to constant zero features.
+  records <- lapply(seq_along(HOURS), function(i) {  # iterate over each forecast row by index
+    list(
+      DATE                  = date_strings[i],     # "DD/MM/YYYY" date string
+      HOUR                  = as.integer(HOURS[i]),# integer hour (0–23)
+      TEMPERATURE           = TEMPERATURE[i],      # degrees Celsius
+      HUMIDITY              = HUMIDITY[i],         # percentage (0–100)
+      WIND_SPEED            = WIND_SPEED[i],       # m/s
+      VISIBILITY            = VISIBILITY[i],       # metres
+      DEW_POINT_TEMPERATURE = 0.0,                 # not from OpenWeather; RF-safe default
+      SOLAR_RADIATION       = 0.0,                 # not from OpenWeather; RF-safe default
+      RAINFALL              = 0.0,                 # not from OpenWeather; RF-safe default
+      SNOWFALL              = 0.0,                 # not from OpenWeather; RF-safe default
+      SEASONS               = seasons_titled[i],   # Title Case season string
+      HOLIDAY               = "No Holiday",        # conservative default; no holiday calendar loaded
+      FUNCTIONING_DAY       = "Yes"                # assume operational during forecast window
+    )
+  })
+  request_body <- list(data = records)  # wrap records list under "data" key per Pydantic schema
+
+  # ── POST to FastAPI ────────────────────────────────────────────────────────
+  predictions <- tryCatch({
+    response <- POST(                              # send HTTP POST request
+      url     = predict_url,                       # FastAPI /predict endpoint
+      body    = request_body,                      # request payload
+      encode  = "json",                            # serialise list to JSON
+      timeout(10)                                  # fail fast if service unreachable
+    )
+
+    if (http_error(response)) {                    # non-2xx status → treat as failure
+      warning(paste("FastAPI returned HTTP", status_code(response), "— falling back to model.csv"))
+      return(NULL)                                 # signal fallback to caller
+    }
+
+    parsed      <- content(response, as = "parsed")  # parse JSON response body
+    pred_values <- parsed$predictions                 # extract numeric predictions list
+
+    pmax(as.integer(unlist(pred_values)), 0L, na.rm = TRUE)  # coerce to integer; clamp negatives to 0
+
+  }, error = function(e) {
+    warning(paste("FastAPI unreachable:", conditionMessage(e), "— falling back to model.csv"))
+    NULL  # return NULL so caller can trigger fallback
+  })
+
+  # ── Fallback ───────────────────────────────────────────────────────────────
+  if (is.null(predictions)) {                        # FastAPI failed or returned NULL
+    return(predict_bike_demand(                      # delegate to model.csv linear regression
+      TEMPERATURE, HUMIDITY, WIND_SPEED, VISIBILITY, SEASONS, HOURS
+    ))
+  }
+
+  return(predictions)  # return FastAPI RF predictions
+}
+
+
+# -----------------------------------------------------------------------------
 # SECTION 6 — calculate_bike_prediction_level()
 # -----------------------------------------------------------------------------
 # Takes the numeric bike predictions and bins them into three named levels.
@@ -386,15 +483,25 @@ generate_city_weather_bike_data <- function() {
   # Fetch live 24-hour weather forecast data (next 8 x 3-hour slots) for every city in the list
   weather_df <- get_weather_forecaset_by_cities(cities_df$CITY_ASCII)
   
-  # Add a BIKE_PREDICTION column by running the regression model on each row,
-  # then add a BIKE_PREDICTION_LEVEL column by binning those predictions.
-  # %>% is the "pipe" operator — it passes the result on the left into the
-  # next function on the right, making code easier to read top-to-bottom.
-  results <- weather_df %>%
-    mutate(BIKE_PREDICTION = predict_bike_demand(
-      TEMPERATURE, HUMIDITY, WIND_SPEED, VISIBILITY, SEASONS, HOURS
-    )) %>%
-    mutate(BIKE_PREDICTION_LEVEL = calculate_bike_prediction_level(BIKE_PREDICTION))
+  # Add a BIKE_PREDICTION column — engine selected by USE_FASTAPI env var.
+  # USE_FASTAPI=true  → Python FastAPI RF (RMSE 173 bikes/hr) via httr POST
+  # USE_FASTAPI=false → local model.csv linear regression (RMSE 334 bikes/hr)
+  # The FastAPI path falls back silently to model.csv on any network error.
+  use_fastapi <- Sys.getenv("USE_FASTAPI", unset = "false") == "true"  # read env var; default off
+
+  if (use_fastapi) {
+    results <- weather_df %>%                           # FastAPI RF prediction path
+      mutate(BIKE_PREDICTION = predict_bike_demand_fastapi(
+        FORECASTDATETIME, TEMPERATURE, HUMIDITY, WIND_SPEED, VISIBILITY, SEASONS, HOURS
+      )) %>%
+      mutate(BIKE_PREDICTION_LEVEL = calculate_bike_prediction_level(BIKE_PREDICTION))
+  } else {
+    results <- weather_df %>%                           # local model.csv fallback path
+      mutate(BIKE_PREDICTION = predict_bike_demand(
+        TEMPERATURE, HUMIDITY, WIND_SPEED, VISIBILITY, SEASONS, HOURS
+      )) %>%
+      mutate(BIKE_PREDICTION_LEVEL = calculate_bike_prediction_level(BIKE_PREDICTION))
+  }
   
   # Join the city coordinates (LAT, LNG) from cities_df back onto the results.
   # left_join() matches rows by the shared column (CITY_ASCII) and adds the
