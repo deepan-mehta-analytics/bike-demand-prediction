@@ -13,7 +13,8 @@ if (!require(tidyverse)) install.packages("tidyverse")
 if (!require(httr))      install.packages("httr")
 if (!require(scales))    install.packages("scales")
 
-source("model_prediction.R")
+source("model_prediction.R")    # weather API + linear regression model
+source("gbfs_client.R")         # live GBFS station availability client (Phase 7B)
 
 test_weather_data_generation <- function() {
   city_weather_bike_df <- generate_city_weather_bike_data()
@@ -30,7 +31,19 @@ shinyServer(function(input, output, session) {
   # Each city now has 8 rows (8 x 3-hour slots = next 24 hours)
   # ---------------------------------------------------------------------------
   city_weather_bike_df <- test_weather_data_generation()
-  
+
+  # Fetch live station availability from GBFS / TfL for all cities at startup.
+  # Wrapped in tryCatch so a network failure never prevents the app from loading.
+  # live_stations_df has columns: CITY_ASCII, STATION_ID, STATION_NAME, LAT, LNG,
+  #   AVAILABLE_BIKES, AVAILABLE_DOCKS, CAPACITY, IS_RENTING, LAST_UPDATED
+  live_stations_df <- tryCatch(
+    get_all_cities_live_stations(unique(city_weather_bike_df$CITY_ASCII)),  # one call covers all cities
+    error = function(e) {                                                    # GBFS outage must not crash app
+      warning(paste("GBFS startup fetch failed:", conditionMessage(e)))
+      EMPTY_STATIONS_SCHEMA                                                  # fall back to empty schema
+    }
+  )
+
   # Parse FORECASTDATETIME once globally so date range calculations work
   city_weather_bike_df <- city_weather_bike_df %>%
     mutate(FORECASTDATETIME_DT = as.POSIXct(FORECASTDATETIME,
@@ -131,18 +144,58 @@ shinyServer(function(input, output, session) {
         )
       
     } else {
-      
-      selected_city        <- city_weather_bike_df %>% filter(CITY_ASCII == input$city_dropdown)
-      selected_city_coords <- cities_max_bike      %>% filter(CITY_ASCII == input$city_dropdown)
-      
-      leaflet(data = selected_city) %>%
-        addTiles() %>%
-        setView(lng  = selected_city_coords$LNG[1],
-                lat  = selected_city_coords$LAT[1],
-                zoom = 10) %>%
-        addMarkers(lng = ~LNG, lat = ~LAT,
-                   popup          = ~DETAILED_LABEL,
-                   clusterOptions = markerClusterOptions())
+
+      selected_city_coords <- cities_max_bike %>% filter(CITY_ASCII == input$city_dropdown)  # city centre for setView
+
+      # Filter live GBFS stations for the selected city; only show stations that are renting
+      city_stations <- live_stations_df %>%
+        filter(CITY_ASCII == input$city_dropdown, IS_RENTING == TRUE)   # exclude closed / out-of-service stations
+
+      if (nrow(city_stations) == 0) {
+        # ── Fallback: GBFS unavailable for this city — show city-centre weather marker ──
+        # This preserves the pre-Phase-7B behaviour for Seoul (no GBFS) and any failed fetch.
+        selected_city <- city_weather_bike_df %>% filter(CITY_ASCII == input$city_dropdown)
+        leaflet(data = selected_city) %>%
+          addTiles() %>%
+          setView(lng  = selected_city_coords$LNG[1],
+                  lat  = selected_city_coords$LAT[1],
+                  zoom = 12) %>%
+          addMarkers(lng = ~LNG, lat = ~LAT,
+                     popup          = ~DETAILED_LABEL,
+                     clusterOptions = markerClusterOptions())          # cluster weather slots at city centre
+
+      } else {
+        # ── Live station layer: one circle marker per GBFS station ──────────────
+        # Colour reflects current availability (matches Yeti green/yellow/red palette):
+        #   >= 5 bikes → #43ac6a (green  — good supply)
+        #    1–4 bikes → #e99002 (yellow — low)
+        #      0 bikes → #f04124 (red    — empty)
+        leaflet(data = city_stations) %>%
+          addTiles() %>%
+          setView(lng  = selected_city_coords$LNG[1],
+                  lat  = selected_city_coords$LAT[1],
+                  zoom = 14) %>%                                        # zoom 14 shows individual station dots
+          addCircleMarkers(
+            lng    = ~LNG,
+            lat    = ~LAT,
+            radius = 7,                                                 # fixed radius — size shows location, not demand
+            color  = ~ifelse(AVAILABLE_BIKES >= 5, "#43ac6a",          # green: well stocked
+                      ifelse(AVAILABLE_BIKES >= 1, "#e99002",          # yellow: low stock
+                                                   "#f04124")),        # red: empty
+            fillColor = ~ifelse(AVAILABLE_BIKES >= 5, "#43ac6a",
+                         ifelse(AVAILABLE_BIKES >= 1, "#e99002",
+                                                      "#f04124")),
+            fillOpacity = 0.85,                                        # slightly transparent fill
+            weight      = 1,                                           # thin border
+            popup = ~paste0(                                           # HTML popup — Yeti colour scheme
+              "<b style='font-size:13px;'>", STATION_NAME, "</b><br>",
+              "<b style='color:", ifelse(AVAILABLE_BIKES >= 5, "#43ac6a",
+                                  ifelse(AVAILABLE_BIKES >= 1, "#e99002", "#f04124")), ";'>",
+              AVAILABLE_BIKES, " bikes available</b><br>",
+              "<span style='color:#666;'>", AVAILABLE_DOCKS, " docks free &nbsp;|&nbsp; Capacity: ", CAPACITY, "</span>"
+            )
+          )
+      }
     }
   })
   
