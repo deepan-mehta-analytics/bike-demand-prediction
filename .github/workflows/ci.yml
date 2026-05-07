@@ -140,3 +140,20 @@ jobs:
           stopifnot(nrow(df) > 0)                         # fail fast if file is empty or missing
           cat('model.csv OK:', nrow(df), 'rows,', ncol(df), 'cols\n')
           "
+
+  # ── Job 3: Docker Compose build smoke test ─────────────────────────────────
+  # Validates that Dockerfile.shiny builds successfully on every push.
+  # Builds ONLY the shiny service — fastapi is skipped because its build context
+  # (../bike-demand-ml-system) is a sibling repo not present in this CI checkout.
+  docker-compose-build:
+    name: Docker — build Shiny service                   # label shown in the Actions UI
+    runs-on: ubuntu-latest                               # GitHub-hosted Ubuntu 24.04 runner
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4                        # clone repo at current ref
+
+      - name: Build Shiny Docker image
+        run: docker compose build shiny                  # builds Dockerfile.shiny via docker-compose.yml
+        env:
+          OPENWEATHER_KEY: ci_placeholder                # not used at build time; suppresses compose variable warning

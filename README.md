@@ -255,6 +255,9 @@ bike-demand-prediction/
 │   ├── model_prediction.R
 │   └── gbfs_client.R                           # Live GBFS / TfL station data client (Phase 7B)
 │
+├── Dockerfile.shiny                            # Containerises R Shiny app (rocker/shiny:4.4.3 + renv)
+├── docker-compose.yml                          # Orchestrates Shiny + FastAPI services locally
+│
 └── .gitignore
 ```
 
@@ -355,10 +358,11 @@ A professional three-column dashboard built on the **Yeti Bootswatch** theme.
 - City comparison bar chart + summary table in the global overview
 - **Live GBFS station markers** — city drill-down shows individual stations coloured by current available bike count (green ≥ 5 / yellow 1–4 / red 0); popups show station name, bikes available, free docks, and capacity *(Phase 7B)*
 
-**Planned (v1.1):**
-- **Operator tab (UC1)** — fleet rebalancing alerts, demand vs. station capacity heatmap, CSV export
-- **Rider tab (UC2)** — demand score (Low / Medium / High) for next 3 hours, best-time-to-ride recommendation, natural-language availability summary
-- **FastAPI prediction engine** — RF model (RMSE 173 bikes/hr) replaces linear model.csv; 2× accuracy improvement
+**Features (v1.1 — in development):**
+- **Operator tab (UC1)** — fleet rebalancing alerts, demand vs. station capacity heatmap, CSV export of 24-hr forecast *(Phase 7D)*
+- **Rider tab (UC2)** — demand score (Low / Medium / High) for next 3 hours, best-time-to-ride recommendation, natural-language availability summary *(Phase 7E)*
+- **FastAPI prediction engine** — RF model (RMSE 173 bikes/hr) replaces linear model.csv; 2× accuracy improvement; `USE_FASTAPI` env var switches engines *(Phase 7C)*
+- **Docker Compose deployment** — `docker compose up` runs the full Shiny + FastAPI stack locally *(Phase 7H)*
 - **Seoul live stations** — GBFS integration pending Seoul Open API key registration
 
 **Demand bands:**
@@ -422,6 +426,28 @@ shiny::runApp("shiny_app/")
 ```
 
 All Shiny-specific packages install automatically on first run if not already present.
+
+### 5. Run with Docker
+
+**Shiny app only (standalone):**
+
+```bash
+docker build -f Dockerfile.shiny -t bikecast-shiny:latest .
+docker run -p 3838:3838 -e OPENWEATHER_KEY=your_actual_key_here bikecast-shiny:latest
+```
+
+The app will be available at `http://localhost:3838/`.
+
+**Full stack with Docker Compose** (Shiny + FastAPI; requires the [bike-demand-ml-system](https://github.com/deepan-mehta-analytics/bike-demand-ml-system) repo cloned as a sibling directory):
+
+```bash
+# Create .env in the repo root:
+echo "OPENWEATHER_KEY=your_actual_key_here" > .env
+
+docker compose up
+```
+
+Shiny at `http://localhost:3838/` · FastAPI at `http://localhost:8000/docs`.
 
 ---
 
@@ -489,29 +515,33 @@ The capstone presentation covers the full pipeline from data collection through 
 - [x] City drill-down map: individual station markers coloured by available bike count
 - [x] Graceful fallback — GBFS failure never crashes the app
 
-#### Phase 7C — FastAPI Integration 🔲
-- [ ] Wire `httr::POST` to Python FastAPI `/predict` in `model_prediction.R`
-- [ ] `USE_FASTAPI` env var switches prediction engine (FastAPI RF vs model.csv fallback)
-- [ ] `docker-compose.yml` — Shiny + FastAPI as co-located services
+#### Phase 7C — FastAPI Integration ✅
+- [x] Wire `httr::POST` to Python FastAPI `/predict` in `model_prediction.R`
+- [x] `USE_FASTAPI` env var switches prediction engine (FastAPI RF vs model.csv fallback)
+- [x] `docker-compose.yml` — Shiny + FastAPI as co-located services
 
-#### Phase 7D — UC1 Operator Tab 🔲
-- [ ] New Shiny tab: demand vs. station capacity alerts (predicted demand > available bikes)
-- [ ] Fleet rebalancing heatmap layer on Leaflet
-- [ ] CSV export of 24-hr demand forecast for operations teams
+#### Phase 7D — UC1 Operator Tab ✅
+- [x] New Shiny tab: demand vs. station capacity alerts (predicted demand > available bikes)
+- [x] Fleet rebalancing heatmap layer on Leaflet
+- [x] CSV export of 24-hr demand forecast for operations teams
 
-#### Phase 7E — UC2 Rider Tab 🔲
-- [ ] New Shiny tab: demand score (Low / Medium / High) for next 3 hours
-- [ ] "Best time to ride today" recommendation
-- [ ] Natural-language summary: available bikes at nearest station
+#### Phase 7E — UC2 Rider Tab ✅
+- [x] New Shiny tab: demand score (Low / Medium / High) for next 3 hours
+- [x] "Best time to ride today" recommendation
+- [x] Natural-language summary: available bikes at nearest station
 
 #### Phase 7F — GCP Streaming Pipeline 🔲
 - [ ] `pipeline/gbfs_to_pubsub.py` — GBFS poller → Pub/Sub (`USE_PUBSUB=false` runs locally)
 - [ ] `pipeline/dataflow_job.py` — Apache Beam: Pub/Sub → BigQuery windowed aggregation
 - [ ] Local mode: DirectRunner + DuckDB (no GCP account required)
 
-#### Phase 7G — Documentation & CI 🔲
-- [ ] README architecture diagram updated with full v1.1 stack
-- [ ] CI extended with Docker Compose smoke test
+#### Phase 7G — Documentation ✅
+- [x] README architecture diagram updated with full v1.1 stack
+- [x] Tech Stack and Roadmap updated for Phase 7 scope
+
+#### Phase 7H — Containerisation & CI ✅
+- [x] `Dockerfile.shiny` — rocker/shiny:4.4.3 base, renv restore via PPM, EXPOSE 3838
+- [x] CI extended with Docker Compose smoke test (`docker-compose-build` job)
 
 ### 🔮 Backlog
 
