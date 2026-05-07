@@ -746,4 +746,295 @@ shinyServer(function(input, output, session) {
     }
   )
 
+
+  # ===========================================================================
+  # RIDER TAB (Phase 7E — UC2)
+  # Demand score badges, best-time recommendation, natural-language summary,
+  # top-station table, live availability map
+  # ===========================================================================
+
+  # ── Reactives ────────────────────────────────────────────────────────────
+
+  rider_city_data <- reactive({                                            # forecast rows for selected rider city
+    city_weather_bike_df %>%                                               # full 5-city 24h frame
+      filter(CITY_ASCII == input$rider_city) %>%                          # filter to chosen city
+      arrange(FORECASTDATETIME_DT)                                        # ensure chronological order
+  })
+
+  rider_stations <- reactive({                                             # live GBFS stations for selected rider city
+    live_stations_df %>%
+      filter(CITY_ASCII == input$rider_city, IS_RENTING == TRUE)          # open stations only
+  })
+
+
+  # ── Map title ─────────────────────────────────────────────────────────────
+
+  output$rider_map_title <- renderUI({                                     # dynamic Rider map header
+    tags$div(
+      class = "map-title",
+      tags$i(class = "glyphicon glyphicon-map-marker", style = "margin-right:7px;"),
+      paste0("Live Station Availability — ", input$rider_city)
+    )
+  })
+
+
+  # ── Demand score cards — next 3 forecast slots ────────────────────────────
+
+  output$rider_demand_scores <- renderUI({                                 # 3-up grid of Yeti label demand badges
+    df <- rider_city_data() %>% head(3L)                                  # first 3 time slots = next 9 hours
+    if (nrow(df) == 0) return(tags$p("No forecast data available."))
+
+    cards <- lapply(seq_len(nrow(df)), function(i) {                      # one card per forecast slot
+      row       <- df[i, ]                                                 # single-row data frame
+      time_lbl  <- format(row$FORECASTDATETIME_DT, "%H:%M")               # e.g. "09:00"
+      level     <- row$BIKE_PREDICTION_LEVEL                               # "small" / "medium" / "large"
+
+      badge_cls <- switch(level,                                           # map level to Yeti label class
+        small  = "label label-success",                                    # green  — low demand
+        medium = "label label-warning",                                    # amber  — moderate demand
+        large  = "label label-danger",                                     # red    — high demand
+        "label label-default"                                              # fallback
+      )
+      demand_text <- switch(level,
+        small  = "Low", medium = "Med", large = "High", "?"               # short text fits inside badge
+      )
+
+      tags$div(class = "col-xs-4", style = "padding:4px;",               # Bootstrap 3: 3 equal columns
+        tags$div(class = "well well-sm demand-card",                      # Yeti well as card background
+          tags$p(class = "demand-time", time_lbl),                        # time slot label
+          tags$span(class = paste(badge_cls, "demand-badge"), demand_text),# coloured demand badge
+          tags$p(class = "demand-bikes",                                  # predicted count below badge
+            scales::comma(row$BIKE_PREDICTION)
+          )
+        )
+      )
+    })
+
+    tags$div(class = "row", style = "margin:0;", cards)                   # Bootstrap grid row containing 3 cards
+  })
+
+
+  # ── Best time to ride recommendation ──────────────────────────────────────
+
+  output$rider_best_time <- renderUI({                                     # lowest-demand slot in 24h window
+    df <- rider_city_data()
+    if (nrow(df) == 0) return(NULL)
+
+    best_row   <- df %>% slice_min(BIKE_PREDICTION, n = 1L, with_ties = FALSE)  # slot with fewest predicted bikes
+    best_time  <- format(best_row$FORECASTDATETIME_DT, "%H:%M")          # e.g. "14:00"
+    best_pred  <- scales::comma(best_row$BIKE_PREDICTION)                 # formatted integer
+    first_time <- format(df$FORECASTDATETIME_DT[1], "%H:%M")             # next (soonest) slot time
+
+    is_now     <- best_time == first_time                                 # TRUE if best time is now
+    time_desc  <- if (is_now) "Now (next 3 hours)" else paste0("Around ", best_time)
+
+    level     <- best_row$BIKE_PREDICTION_LEVEL
+    badge_cls <- switch(level,                                            # Yeti label for the best-slot demand level
+      small  = "label label-success",
+      medium = "label label-warning",
+      large  = "label label-danger",
+      "label label-default"
+    )
+    level_text <- switch(level,
+      small = "Low", medium = "Moderate", large = "High", "Unknown"
+    )
+
+    tags$div(class = "dash-card",
+      tags$h5("Best Time to Ride Today"),
+      tags$div(class = "well", style = "padding:12px; margin-bottom:0; background:#f9fbfc;",
+        tags$p(style = "margin:0 0 5px;",                                # time with clock icon
+          tags$i(class = "glyphicon glyphicon-time",
+                 style = "color:#43ac6a; margin-right:6px;"),
+          tags$strong(time_desc)
+        ),
+        tags$p(style = "font-size:12px; color:#555; margin:0;",          # demand level + count
+          "Demand: ", tags$span(class = badge_cls, level_text),
+          " — ", best_pred, " bikes predicted"
+        )
+      )
+    )
+  })
+
+
+  # ── Natural-language availability summary ─────────────────────────────────
+
+  output$rider_summary <- renderUI({                                       # plain-language 3-sentence summary
+    df       <- rider_city_data()
+    stations <- rider_stations()
+    if (nrow(df) == 0) return(NULL)
+
+    first_row  <- df %>% slice(1L)                                        # soonest forecast slot
+    city       <- first_row$CITY_ASCII                                    # city name for prose
+    level      <- first_row$BIKE_PREDICTION_LEVEL
+    now_pred   <- scales::comma(first_row$BIKE_PREDICTION)                # formatted bikes count
+
+    level_class <- switch(level,                                          # Yeti label for inline badge
+      small  = "label label-success",
+      medium = "label label-warning",
+      large  = "label label-danger",
+      "label label-default"
+    )
+    level_word <- switch(level,
+      small = "LOW", medium = "MODERATE", large = "HIGH", "UNKNOWN"      # uppercase for badge text
+    )
+
+    has_gbfs    <- nrow(stations) > 0                                     # whether live data is available
+    total_bikes <- if (has_gbfs) scales::comma(sum(stations$AVAILABLE_BIKES, na.rm = TRUE)) else NULL
+    n_stations  <- nrow(stations)
+
+    best_row    <- df %>% slice_min(BIKE_PREDICTION, n = 1L, with_ties = FALSE)
+    best_time   <- format(best_row$FORECASTDATETIME_DT, "%H:%M")
+    first_time  <- format(first_row$FORECASTDATETIME_DT, "%H:%M")
+
+    tags$div(class = "dash-card",
+      tags$h5("Availability Summary"),
+      tags$div(class = "well",
+               style = "padding:12px; margin-bottom:0; font-size:12.5px; line-height:1.65; color:#444;",
+
+        # Line 1: current demand level
+        tags$p(style = "margin:0 0 7px;",
+          "Demand in ", tags$strong(city), " right now: ",
+          tags$span(class = level_class, level_word),
+          " (", now_pred, " bikes predicted)."
+        ),
+
+        # Line 2: live fleet availability (or absence of data)
+        if (has_gbfs)
+          tags$p(style = "margin:0 0 7px;",
+            tags$strong(total_bikes), " bikes available across ",
+            tags$strong(n_stations), " open stations."
+          )
+        else
+          tags$p(style = "margin:0 0 7px; color:#888; font-style:italic;",
+            "Live station data is unavailable for this city."
+          ),
+
+        # Line 3: best-time hint
+        if (best_time != first_time)
+          tags$p(style = "margin:0;",
+            tags$i(class = "glyphicon glyphicon-thumbs-up",
+                   style = "color:#43ac6a; margin-right:4px;"),
+            "Quietest window today: ", tags$strong(best_time),
+            " — a good time to plan your ride."
+          )
+        else
+          tags$p(style = "margin:0;",
+            tags$i(class = "glyphicon glyphicon-thumbs-up",
+                   style = "color:#43ac6a; margin-right:4px;"),
+            "Now is already the quietest window in today's forecast."
+          )
+      )
+    )
+  })
+
+
+  # ── Top-5 stations by available bikes ─────────────────────────────────────
+
+  output$rider_station_table <- renderUI({                                 # Yeti table-striped + label badges
+    stations <- rider_stations()
+
+    if (nrow(stations) == 0) {                                            # no GBFS for this city
+      return(tags$div(class = "dash-card",
+        tags$h5("Live Station Availability"),
+        tags$p(style = "font-size:12px; color:#888; margin:0;",
+          "No live data available for this city."
+        )
+      ))
+    }
+
+    top <- stations %>%
+      arrange(desc(AVAILABLE_BIKES)) %>%                                  # highest-stocked first
+      head(5L)                                                             # top 5 — fits sidebar without scrolling
+
+    rows <- lapply(seq_len(nrow(top)), function(i) {                      # one table row per station
+      s     <- top[i, ]
+      avail <- s$AVAILABLE_BIKES
+
+      status_cls  <- if (avail >= 5) "label label-success"               # green: good supply
+                     else if (avail >= 1) "label label-warning"          # amber: low supply
+                     else "label label-danger"                           # red: empty
+      status_text <- if (avail >= 5) "Good" else if (avail >= 1) "Low" else "Empty"
+
+      name <- s$STATION_NAME                                              # truncate long names for narrow column
+      if (nchar(name) > 22) name <- paste0(substr(name, 1L, 20L), "…")
+
+      tags$tr(
+        tags$td(name, style = "font-size:11px;"),
+        tags$td(avail, style = "font-size:11px; text-align:center;"),
+        tags$td(style = "text-align:center;",
+          tags$span(class = status_cls, status_text)                     # Yeti label badge
+        )
+      )
+    })
+
+    tags$div(class = "dash-card",
+      tags$h5("Top Stations — Live Availability"),
+      tags$table(
+        class = "table table-striped table-condensed table-hover",        # Yeti Bootstrap 3 table classes
+        style = "margin-bottom:0; font-size:12px;",
+        tags$thead(
+          tags$tr(
+            tags$th("Station"),
+            tags$th(style = "text-align:center;", "Bikes"),
+            tags$th(style = "text-align:center;", "Status")
+          )
+        ),
+        tags$tbody(rows)
+      )
+    )
+  })
+
+
+  # ── Rider live station availability map ───────────────────────────────────
+
+  output$rider_map <- renderLeaflet({                                     # same colour logic as Live Map (Phase 7B)
+    stations    <- rider_stations()
+    city_coords <- cities_max_bike %>% filter(CITY_ASCII == input$rider_city)
+
+    centre_lng <- if (nrow(city_coords) > 0) city_coords$LNG[1] else 0
+    centre_lat <- if (nrow(city_coords) > 0) city_coords$LAT[1] else 20
+
+    base_map <- leaflet() %>%
+      addTiles() %>%
+      setView(lng = centre_lng, lat = centre_lat, zoom = 14)              # street-level zoom for finding stations
+
+    if (nrow(stations) == 0) {                                            # Seoul / GBFS failure fallback
+      cd <- rider_city_data()
+      return(base_map %>%
+        addMarkers(
+          data           = cd,
+          lng            = ~LNG, lat = ~LAT,
+          popup          = ~paste0("<b>", CITY_ASCII, "</b><br>",
+                                   "Forecast: ", scales::comma(BIKE_PREDICTION),
+                                   " bikes at ", FORECASTDATETIME),
+          clusterOptions = markerClusterOptions()
+        )
+      )
+    }
+
+    # Colour by available bikes: green (>=5), amber (1-4), red (0)
+    # Consistent with Live Map palette so riders recognise the scheme
+    base_map %>%
+      addCircleMarkers(
+        data        = stations,
+        lng         = ~LNG, lat = ~LAT,
+        radius      = 7,                                                  # fixed radius — size = location, not demand
+        color       = ~ifelse(AVAILABLE_BIKES >= 5, "#43ac6a",
+                       ifelse(AVAILABLE_BIKES >= 1, "#e99002", "#f04124")),
+        fillColor   = ~ifelse(AVAILABLE_BIKES >= 5, "#43ac6a",
+                       ifelse(AVAILABLE_BIKES >= 1, "#e99002", "#f04124")),
+        fillOpacity = 0.85,
+        weight      = 1,
+        popup = ~paste0(
+          "<b style='font-size:13px;'>", STATION_NAME, "</b><br>",
+          "<b style='color:",
+          ifelse(AVAILABLE_BIKES >= 5, "#43ac6a",
+          ifelse(AVAILABLE_BIKES >= 1, "#e99002", "#f04124")),
+          ";'>", AVAILABLE_BIKES, " bikes available</b><br>",
+          "<span style='color:#666;'>",
+          AVAILABLE_DOCKS, " docks free | Capacity: ", CAPACITY, "</span>"
+        )
+      )
+  })
+
 })  # end shinyServer

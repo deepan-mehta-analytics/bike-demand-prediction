@@ -239,6 +239,13 @@ shinyUI(
         .dash-left .panel-body { padding: 10px 14px; font-size: 12.5px; line-height: 1.5; }
         .dash-left .panel-title { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.3px; }
 
+        /* ── Rider tab: demand score cards (3-up Bootstrap grid inside dash-card) ── */
+        /* well-sm provides the card background; demand-* classes handle inner layout */
+        .demand-card { text-align: center; min-height: 82px; }
+        .demand-card .demand-time { font-size: 11px; color: #888; margin: 0 0 6px; }
+        .demand-card .demand-badge { font-size: 13px !important; padding: 5px 9px !important; display: inline-block; border-radius: 3px; }
+        .demand-card .demand-bikes { font-size: 11px; color: #666; margin: 7px 0 0; }
+
       ")))
     ),
     
@@ -562,7 +569,75 @@ shinyUI(
                )
 
       )  # end dashboard-wrapper (Operator)
-    )    # end Operator tabPanel
+    ),   # end Operator tabPanel
+
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # RIDER TAB (Phase 7E — UC2)
+    # End-user view for cyclists:
+    #   — Demand score badges (Yeti label-success/warning/danger) for next 3 slots
+    #   — Best-time-to-ride recommendation (lowest demand hour today)
+    #   — Natural-language availability summary
+    #   — Top-5 stations by live bike count (Yeti table-striped + label badges)
+    #   — Live station availability map
+    # ══════════════════════════════════════════════════════════════════════════
+    tabPanel(
+      title = tags$span(
+        tags$i(class = "glyphicon glyphicon-road", style = "margin-right:5px;"),
+        "Rider"
+      ),
+
+      tags$div(class = "dashboard-wrapper",
+
+               # ════════════════════════════════════════════════════════════════
+               # LEFT SIDEBAR — city, demand cards, best time, summary, stations
+               # ════════════════════════════════════════════════════════════════
+               tags$div(class = "dash-left", style = "width:340px; min-width:340px;",
+
+                        # City selector
+                        tags$div(class = "dash-card",
+                                 tags$h5("Select City"),
+                                 selectInput(
+                                   inputId  = "rider_city",
+                                   label    = NULL,
+                                   choices  = c("Seoul", "London", "New York", "Paris", "Chicago"),
+                                   selected = "London"
+                                 )
+                        ),
+
+                        # Demand score cards — Yeti label-success/warning/danger for next 3 forecast slots
+                        # Each card: time slot label + coloured demand badge + predicted bike count
+                        tags$div(class = "dash-card",
+                                 tags$h5("Demand Score — Next 9 Hours"),
+                                 uiOutput("rider_demand_scores")
+                        ),
+
+                        # Best time recommendation — lowest-demand slot in the 24h window
+                        uiOutput("rider_best_time"),
+
+                        # Natural-language summary — demand level + live bikes + best-time hint
+                        uiOutput("rider_summary"),
+
+                        # Top-5 stations by current bike availability (Yeti table + label badges)
+                        uiOutput("rider_station_table")
+
+               ),  # end dash-left (Rider)
+
+
+               # ════════════════════════════════════════════════════════════════
+               # CENTRE — Live station availability map
+               # Same colour scheme as Live Map: green ≥5, amber 1–4, red 0 bikes
+               # ════════════════════════════════════════════════════════════════
+               tags$div(class = "dash-map",
+                        tags$div(class = "map-header",
+                                 uiOutput("rider_map_title"),
+                                 tags$div(class = "map-badge", "Live Availability")
+                        ),
+                        leafletOutput("rider_map", height = "calc(100vh - 130px)")
+               )
+
+      )  # end dashboard-wrapper (Rider)
+    )    # end Rider tabPanel
 
   )      # end navbarPage
 )        # end shinyUI
