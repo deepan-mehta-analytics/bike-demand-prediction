@@ -359,7 +359,8 @@ predict_bike_demand <- function(TEMPERATURE, HUMIDITY, WIND_SPEED, VISIBILITY, S
 # Returns: integer vector of predicted bike counts (same length as input)
 
 predict_bike_demand_fastapi <- function(FORECASTDATETIME, TEMPERATURE, HUMIDITY,
-                                        WIND_SPEED, VISIBILITY, SEASONS, HOURS) {
+                                        WIND_SPEED, VISIBILITY, SEASONS, HOURS,
+                                        city = "seoul") {           # city name routed to per-city RF artifact
 
   # ── Config ────────────────────────────────────────────────────────────────
   fastapi_url <- Sys.getenv("FASTAPI_URL", unset = "http://localhost:8000")  # service endpoint; overridden by Docker Compose
@@ -401,7 +402,7 @@ predict_bike_demand_fastapi <- function(FORECASTDATETIME, TEMPERATURE, HUMIDITY,
       FUNCTIONING_DAY       = "Yes"                # assume operational during forecast window
     )
   })
-  request_body <- list(data = records)  # wrap records list under "data" key per Pydantic schema
+  request_body <- list(city = tolower(city), data = records)  # city routes to per-city RF artifact; data = hourly records
 
   # ── POST to FastAPI ────────────────────────────────────────────────────────
   predictions <- tryCatch({
@@ -490,10 +491,15 @@ generate_city_weather_bike_data <- function() {
   use_fastapi <- Sys.getenv("USE_FASTAPI", unset = "false") == "true"  # read env var; default off
 
   if (use_fastapi) {
-    results <- weather_df %>%                           # FastAPI RF prediction path
-      mutate(BIKE_PREDICTION = predict_bike_demand_fastapi(
-        FORECASTDATETIME, TEMPERATURE, HUMIDITY, WIND_SPEED, VISIBILITY, SEASONS, HOURS
-      )) %>%
+    results <- weather_df %>%                           # FastAPI RF prediction path — one API call per city
+      group_by(CITY_ASCII) %>%                          # split rows by city so each group gets its own model
+      group_modify(~ {                                  # apply function to each city group; .y holds group key
+        .x %>% mutate(BIKE_PREDICTION = predict_bike_demand_fastapi(
+          FORECASTDATETIME, TEMPERATURE, HUMIDITY, WIND_SPEED, VISIBILITY, SEASONS, HOURS,
+          city = tolower(.y$CITY_ASCII)                 # pass lowercase city name to route to correct artifact
+        ))
+      }) %>%
+      ungroup() %>%                                     # remove grouping so downstream code sees a flat data frame
       mutate(BIKE_PREDICTION_LEVEL = calculate_bike_prediction_level(BIKE_PREDICTION))
   } else {
     results <- weather_df %>%                           # local model.csv fallback path
