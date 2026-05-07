@@ -68,15 +68,17 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          sudo apt-get update -qq                                   # refresh apt package index
+          sudo apt-get update -qq                                    # refresh apt package index
           # R HTTP/SSL/XML stack — required by httr, openssl, xml2
           sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev
           # R text rendering stack — required by systemfonts -> textshaping -> ragg (ggplot2 chain)
           sudo apt-get install -y libfontconfig1-dev libharfbuzz-dev libfribidi-dev libfreetype6-dev
           # R image format stack — required by png, tiff, jpeg device packages
           sudo apt-get install -y libpng-dev libtiff-dev libjpeg-dev
-          # R spatial/GIS stack — required by sf and units (pulled in by leaflet)
-          sudo apt-get install -y libudunits2-dev libgdal-dev libgeos-dev libproj-dev
+          # R spatial/GIS stack — required by sf, units, s2, terra (pulled in by leaflet)
+          sudo apt-get install -y libudunits2-dev libgdal-dev libgeos-dev libproj-dev cmake gdal-bin
+          # R misc — libx11-dev required by clipr; pandoc required by knitr/rmarkdown
+          sudo apt-get install -y libx11-dev pandoc
 
       - name: Set up R 4.4.3
         uses: r-lib/actions/setup-r@v2
@@ -84,10 +86,17 @@ jobs:
           r-version: "4.4.3"                             # pin to match renv.lock R version
           use-public-rspm: true                          # use Posit PPM for pre-built Ubuntu binaries
 
+      - name: Pre-install packages not yet in PPM binary index for Ubuntu Noble
+        shell: bash
+        run: |
+          # bit/bit64 4.6.0 and RSQLite 2.4.3 are absent from PPM's Noble binary index;
+          # install from CRAN source first so renv::restore() skips them
+          Rscript -e "install.packages(c('bit', 'bit64', 'RSQLite'), repos = 'https://cloud.r-project.org', type = 'source')"
+
       - name: Restore renv library (with cache)
         uses: r-lib/actions/setup-renv@v2
         with:
-          cache-version: 1                               # increment this to bust the cache on next run
+          cache-version: 2                               # bumped: lockfile and pre-install strategy changed
 
       - name: R library smoke test
         shell: bash                                       # explicit bash for heredoc syntax
