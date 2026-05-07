@@ -268,7 +268,7 @@ shinyUI(
                                  selectInput(
                                    inputId  = "city_dropdown",
                                    label    = NULL,
-                                   choices  = c("All", "Seoul", "London", "New York", "Paris", "Chicago"),  # Suzhou removed (no GBFS); Chicago added Phase 7A
+                                   choices  = c("All", "Seoul", "London", "New York", "Paris", "Chicago", "Washington DC"),
                                    selected = "Paris"   # ← Default to Paris so charts appear immediately
                                  ),
                                  tags$p(style = "font-size:11px; color:#888; margin:4px 0 0;",
@@ -293,7 +293,7 @@ shinyUI(
                                  tags$h5("Coverage"),
                                  tags$div(class = "stat-row",
                                           tags$div(class = "stat-box stat-cities",
-                                                   tags$div(class = "stat-num", "5"),
+                                                   tags$div(class = "stat-num", "6"),
                                                    tags$div(class = "stat-lbl", "Cities")
                                           ),
                                           tags$div(class = "stat-box stat-days",
@@ -504,7 +504,7 @@ shinyUI(
                                  selectInput(
                                    inputId  = "operator_city",
                                    label    = NULL,
-                                   choices  = c("Seoul", "London", "New York", "Paris", "Chicago"),
+                                   choices  = c("Seoul", "London", "New York", "Paris", "Chicago", "Washington DC"),
                                    selected = "London"        # ← London has live GBFS and good station density
                                  )
                         ),
@@ -600,7 +600,7 @@ shinyUI(
                                  selectInput(
                                    inputId  = "rider_city",
                                    label    = NULL,
-                                   choices  = c("Seoul", "London", "New York", "Paris", "Chicago"),
+                                   choices  = c("Seoul", "London", "New York", "Paris", "Chicago", "Washington DC"),
                                    selected = "London"
                                  )
                         ),

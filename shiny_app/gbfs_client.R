@@ -69,6 +69,12 @@ CITY_GBFS_CONFIG <- list(                                           # named list
     type       = "gbfs",                                            # standard GBFS parser
     info_url   = "https://gbfs.divvybikes.com/gbfs/en/station_information.json",
     status_url = "https://gbfs.divvybikes.com/gbfs/en/station_status.json"
+  ),
+
+  "Washington DC" = list(                                           # Capital Bikeshare GBFS v2 — fully public, no auth
+    type       = "gbfs",                                            # standard GBFS parser (same as NYC, Paris, Chicago)
+    info_url   = "https://gbfs.capitalbikeshare.com/gbfs/en/station_information.json",  # static: name/lat/lon/capacity
+    status_url = "https://gbfs.capitalbikeshare.com/gbfs/en/station_status.json"        # live: available bikes/docks
   )
 )
 

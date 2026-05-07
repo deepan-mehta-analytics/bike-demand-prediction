@@ -93,3 +93,18 @@ cities:
     bigquery_dataset: null                                # no BigQuery public dataset for Chicago/Divvy
     bigquery_project: null                                # BQ project (null = not applicable)
     notes: "Divvy (Lyft) GBFS v2. Added in Phase 7A to replace Suzhou (which lacked GBFS coverage)."
+
+  # ── Washington DC ─────────────────────────────────────────────────────────
+  - name: "Washington DC"                                   # display name in Shiny UI
+    name_ascii: "Washington DC"                             # ASCII form; slug-mapped to "dc" for FastAPI routing
+    lat: 38.8951                                            # city centre latitude
+    lng: -77.0364                                           # city centre longitude
+    country: "United States"                               # country display name
+    iso2: "US"                                              # ISO 3166-1 alpha-2 code
+    timezone: "America/New_York"                            # DC uses Eastern time (same as NYC)
+    gbfs_autodiscovery: "https://gbfs.capitalbikeshare.com/gbfs/gbfs.json"  # GBFS v2 autodiscovery — no auth
+    live_station_api: "https://gbfs.capitalbikeshare.com/gbfs/en/station_status.json"  # live status feed
+    live_api_key_env: null                                  # Capital Bikeshare GBFS is fully public — no key needed
+    bigquery_dataset: null                                  # no BigQuery public dataset for Capital Bikeshare
+    bigquery_project: null                                  # BQ project (null = not applicable)
+    notes: "Capital Bikeshare (Lyft) GBFS v2. Trip history at https://capitalbikeshare.com/system-data. FastAPI artifact key: dc."
