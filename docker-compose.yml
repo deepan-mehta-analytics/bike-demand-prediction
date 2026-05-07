@@ -1,0 +1,50 @@
+# =============================================================================
+# docker-compose.yml
+# -----------------------------------------------------------------------------
+# Brings up the full Bikecast stack locally:
+#   - fastapi  : Python RF inference service (bike-demand-ml-system repo)
+#   - shiny    : R Shiny dashboard (this repo) — Dockerfile.shiny added Phase 7H
+#
+# Usage:
+#   docker compose up fastapi          # start FastAPI only (Phase 7C)
+#   docker compose up                  # full stack (after Phase 7H Dockerfile.shiny)
+#
+# Env vars expected in a .env file or shell:
+#   OPENWEATHER_KEY   — OpenWeather API key for the Shiny app
+# =============================================================================
+
+services:
+
+  # ── FastAPI inference service ────────────────────────────────────────────
+  fastapi:
+    image: bike-demand-ml:latest               # local image tag; built by the block below
+    build:
+      context: ../bike-demand-ml-system        # sibling repo; python FastAPI + RF model code
+    ports:
+      - "8000:8000"                            # expose inference endpoint to host
+    environment:
+      - USE_PUBSUB=false                       # local mode: no GCP Pub/Sub billing
+    volumes:
+      - ../bike-demand-ml-system/models:/app/models  # mount pre-trained .pkl artifacts
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]  # probe the root health endpoint
+      interval: 10s                            # check every 10 seconds
+      timeout: 5s                              # fail if no reply within 5 seconds
+      retries: 3                               # mark unhealthy after 3 consecutive failures
+
+  # ── R Shiny dashboard ────────────────────────────────────────────────────
+  # NOTE: Dockerfile.shiny is Phase 7H scope — build block is a stub until then.
+  shiny:
+    image: bikecast-shiny:latest               # local image tag
+    build:
+      context: .                               # build from this repo root
+      dockerfile: Dockerfile.shiny             # added in Phase 7H
+    ports:
+      - "3838:3838"                            # Shiny default port
+    depends_on:
+      fastapi:
+        condition: service_healthy             # wait for FastAPI to pass health check first
+    environment:
+      - OPENWEATHER_KEY=${OPENWEATHER_KEY}     # forwarded from host .env or shell export
+      - USE_FASTAPI=true                       # use FastAPI RF predictions inside Docker
+      - FASTAPI_URL=http://fastapi:8000        # Docker service name resolves internally
