@@ -13,7 +13,8 @@
 # Compose: docker compose up   (after fastapi service is also available)
 # =============================================================================
 
-FROM rocker/shiny:4.4.3                                # R 4.4.3 + shiny-server base image
+# R 4.4.3 + shiny-server base image
+FROM rocker/shiny:4.4.3
 
 # ── System dependencies ───────────────────────────────────────────────────────
 # Mirror the apt-get install block from .github/workflows/ci.yml r-check job.
@@ -35,7 +36,8 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
 # ── R package restore ─────────────────────────────────────────────────────────
 # Copy lockfile first so Docker can cache this expensive layer.
 # The renv::restore() step only re-runs when renv.lock changes.
-COPY renv.lock /tmp/renv.lock                          # lockfile — 139 packages, R 4.4.3
+# lockfile — 139 packages, R 4.4.3
+COPY renv.lock /tmp/renv.lock
 
 RUN R -e "\
     install.packages('renv', \
@@ -54,18 +56,23 @@ RUN R -e "\
 # no per-project isolation needed; shiny::runApp() will find packages on the standard search path)
 
 # ── App files ─────────────────────────────────────────────────────────────────
-WORKDIR /srv/shiny-server                              # shiny::runApp() sets working dir here
+# shiny::runApp() sets working dir here
+WORKDIR /srv/shiny-server
 
-COPY shiny_app/ .                                      # server.R, ui.R, model_prediction.R, gbfs_client.R
+# server.R, ui.R, model_prediction.R, gbfs_client.R
+COPY shiny_app/ .
 
 # model_prediction.R references data files as bare filenames (no path prefix):
 #   read_csv("selected_cities.csv")    — line 384
 #   load_saved_model("model.csv")      — line 278
 # Both files must be in WORKDIR so they resolve correctly from the app's working directory.
-COPY data/processed/model.csv     model.csv            # linear regression coefficients
-COPY data/raw/selected_cities.csv selected_cities.csv  # city list with lat/lng coordinates
+# linear regression coefficients
+COPY data/processed/model.csv     model.csv
+# city list with lat/lng coordinates
+COPY data/raw/selected_cities.csv selected_cities.csv
 
-EXPOSE 3838                                            # Shiny default port
+# Shiny default port
+EXPOSE 3838
 
 # Health check — polls the root path once the app is running
 # OPENWEATHER_KEY must be set at runtime for the app to serve real data;
