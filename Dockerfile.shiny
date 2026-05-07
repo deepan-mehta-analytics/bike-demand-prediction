@@ -1,0 +1,80 @@
+# =============================================================================
+# Dockerfile.shiny
+# -----------------------------------------------------------------------------
+# Containerises the Bikecast R Shiny dashboard.
+#
+# Base image: rocker/shiny:4.4.3
+#   — matches R version pinned in renv.lock and CI (r-check job)
+#   — ships with shiny, ggplot2, tidyverse and other common packages pre-built,
+#     reducing the number of packages renv::restore() needs to compile from source
+#
+# Build:  docker build -f Dockerfile.shiny -t bikecast-shiny:latest .
+# Run:    docker run -p 3838:3838 -e OPENWEATHER_KEY=<key> bikecast-shiny:latest
+# Compose: docker compose up   (after fastapi service is also available)
+# =============================================================================
+
+FROM rocker/shiny:4.4.3                                # R 4.4.3 + shiny-server base image
+
+# ── System dependencies ───────────────────────────────────────────────────────
+# Mirror the apt-get install block from .github/workflows/ci.yml r-check job.
+# These native libraries are required to compile R packages from source when
+# pre-built PPM binaries are unavailable.
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+    # R HTTP/SSL/XML stack — required by httr, openssl, xml2
+    libcurl4-openssl-dev libssl-dev libxml2-dev \
+    # R text rendering stack — required by systemfonts → textshaping → ragg (ggplot2 chain)
+    libfontconfig1-dev libharfbuzz-dev libfribidi-dev libfreetype6-dev \
+    # R image format stack — required by png, tiff, jpeg
+    libpng-dev libtiff-dev libjpeg-dev \
+    # R spatial/GIS stack — required by sf, units, s2, terra (pulled in by leaflet)
+    libudunits2-dev libgdal-dev libgeos-dev libproj-dev cmake gdal-bin \
+    # Misc — libx11-dev required by clipr
+    libx11-dev \
+    && rm -rf /var/lib/apt/lists/*                     # clean apt cache to keep layer small
+
+# ── R package restore ─────────────────────────────────────────────────────────
+# Copy lockfile first so Docker can cache this expensive layer.
+# The renv::restore() step only re-runs when renv.lock changes.
+COPY renv.lock /tmp/renv.lock                          # lockfile — 139 packages, R 4.4.3
+
+RUN R -e "\
+    install.packages('renv', \
+        repos = 'https://packagemanager.posit.co/cran/__linux__/noble/latest', \
+        quiet = TRUE); \
+    options(repos = c( \
+        PPM  = 'https://packagemanager.posit.co/cran/__linux__/noble/latest', \
+        CRAN = 'https://cloud.r-project.org' \
+    )); \
+    renv::restore( \
+        lockfile = '/tmp/renv.lock', \
+        library  = .libPaths()[1] \
+    )"
+# PPM provides pre-built Ubuntu Noble binaries — avoids source compilation (~5 min vs ~35 min)
+# library = .libPaths()[1] installs to the global system library (correct for containers —
+# no per-project isolation needed; shiny::runApp() will find packages on the standard search path)
+
+# ── App files ─────────────────────────────────────────────────────────────────
+WORKDIR /srv/shiny-server                              # shiny::runApp() sets working dir here
+
+COPY shiny_app/ .                                      # server.R, ui.R, model_prediction.R, gbfs_client.R
+
+# model_prediction.R references data files as bare filenames (no path prefix):
+#   read_csv("selected_cities.csv")    — line 384
+#   load_saved_model("model.csv")      — line 278
+# Both files must be in WORKDIR so they resolve correctly from the app's working directory.
+COPY data/processed/model.csv     model.csv            # linear regression coefficients
+COPY data/raw/selected_cities.csv selected_cities.csv  # city list with lat/lng coordinates
+
+EXPOSE 3838                                            # Shiny default port
+
+# Health check — polls the root path once the app is running
+# OPENWEATHER_KEY must be set at runtime for the app to serve real data;
+# without it the app will error, so the healthcheck will fail until the key is present.
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+    CMD curl -sf http://localhost:3838/ > /dev/null || exit 1
+
+# Run shiny::runApp() directly rather than delegating to shiny-server.
+# Simpler single-app configuration: app served at http://localhost:3838/ (not /bikecast/).
+# quiet=TRUE suppresses per-request access log noise in container stdout.
+CMD ["R", "-e", \
+    "shiny::runApp('/srv/shiny-server', host='0.0.0.0', port=3838, quiet=TRUE)"]
