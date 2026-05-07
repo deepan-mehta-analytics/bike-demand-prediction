@@ -232,6 +232,13 @@ shinyUI(
         /* ── Footer ── */
         .dash-footer { text-align:center; padding:8px; font-size:11px; color:#aaa; margin-top:auto; }
 
+        /* ── Operator tab: Yeti Bootstrap panels in left sidebar ── */
+        /* Round corners to match dash-card; typography consistent with Barlow */
+        .dash-left .panel { border-radius: 8px !important; overflow: hidden; }
+        .dash-left .panel-heading { padding: 10px 14px; }
+        .dash-left .panel-body { padding: 10px 14px; font-size: 12.5px; line-height: 1.5; }
+        .dash-left .panel-title { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.3px; }
+
       ")))
     ),
     
@@ -460,6 +467,102 @@ shinyUI(
                )  # end dash-right
                
       )  # end dashboard-wrapper
-    )    # end tabPanel
+    ),   # end Live Map tabPanel
+
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # OPERATOR TAB (Phase 7D — UC1)
+    # Fleet rebalancing view for city operators:
+    #   — Demand-vs-supply alert panels (Yeti panel-danger / warning / success)
+    #   — Fill-rate progress bar across all stations
+    #   — Leaflet map: stations coloured/sized by rebalancing urgency
+    #   — 24-hr forecast CSV export
+    # ══════════════════════════════════════════════════════════════════════════
+    tabPanel(
+      title = tags$span(
+        tags$i(class = "glyphicon glyphicon-dashboard", style = "margin-right:5px;"),
+        "Operator"
+      ),
+
+      tags$div(class = "dashboard-wrapper",
+
+               # ════════════════════════════════════════════════════════════════
+               # LEFT SIDEBAR — controls, alerts, fleet stats, export
+               # ════════════════════════════════════════════════════════════════
+               tags$div(class = "dash-left", style = "width:310px; min-width:310px;",
+
+                        # City selector for Operator view (no "All" option — always city-specific)
+                        tags$div(class = "dash-card",
+                                 tags$h5("Select City"),
+                                 selectInput(
+                                   inputId  = "operator_city",
+                                   label    = NULL,
+                                   choices  = c("Seoul", "London", "New York", "Paris", "Chicago"),
+                                   selected = "London"        # ← London has live GBFS and good station density
+                                 )
+                        ),
+
+                        # Demand-vs-supply alert — Yeti panel-danger / panel-warning / panel-success
+                        # Rendered server-side so it reflects live GBFS + forecast data
+                        uiOutput("operator_alerts"),
+
+                        # Fleet fill-rate summary with Yeti progress bar
+                        uiOutput("operator_station_stats"),
+
+                        # 24-hour demand forecast CSV download
+                        tags$div(class = "dash-card",
+                                 tags$h5("Export Forecast"),
+                                 downloadButton(
+                                   "download_forecast",
+                                   label = tags$span(
+                                     tags$i(class = "glyphicon glyphicon-download-alt", style = "margin-right:6px;"),
+                                     "Download 24h CSV"
+                                   ),
+                                   class = "btn btn-primary btn-block"   # Yeti primary button — full width
+                                 ),
+                                 tags$p(
+                                   style = "font-size:11px; color:#888; margin-top:8px; margin-bottom:0;",
+                                   "24-hour demand forecast for the selected city."
+                                 )
+                        ),
+
+                        # Rebalancing colour legend
+                        tags$div(class = "dash-card",
+                                 tags$h5("Rebalancing Key"),
+                                 tags$div(class = "legend-row",
+                                          tags$div(class = "legend-dot dot-red"),
+                                          tags$div(tags$strong("Restock"), " — fill rate < 20%")
+                                 ),
+                                 tags$div(class = "legend-row",
+                                          tags$div(class = "legend-dot dot-yellow"),
+                                          tags$div(tags$strong("Monitor"), " — fill rate 20–60%")
+                                 ),
+                                 tags$div(class = "legend-row",
+                                          tags$div(class = "legend-dot dot-green"),
+                                          tags$div(tags$strong("Source"), " — fill rate > 60%")
+                                 ),
+                                 tags$p(
+                                   style = "font-size:11px; color:#888; margin:8px 0 0; font-style:italic;",
+                                   "Circle size reflects station capacity."
+                                 )
+                        )
+
+               ),  # end dash-left (Operator)
+
+
+               # ════════════════════════════════════════════════════════════════
+               # CENTRE — Operator fleet rebalancing map
+               # ════════════════════════════════════════════════════════════════
+               tags$div(class = "dash-map",
+                        tags$div(class = "map-header",
+                                 uiOutput("operator_map_title"),           # dynamic title with city name
+                                 tags$div(class = "map-badge", "Rebalancing View")
+                        ),
+                        leafletOutput("operator_map", height = "calc(100vh - 130px)")
+               )
+
+      )  # end dashboard-wrapper (Operator)
+    )    # end Operator tabPanel
+
   )      # end navbarPage
 )        # end shinyUI

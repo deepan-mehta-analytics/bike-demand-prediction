@@ -491,4 +491,259 @@ shinyServer(function(input, output, session) {
     build_humidity_chart(selected_city_data())
   })
   
+
+  # ===========================================================================
+  # OPERATOR TAB (Phase 7D — UC1)
+  # Fleet rebalancing view: demand-vs-supply alerts, station heatmap, CSV export
+  # ===========================================================================
+
+  # ── Reactives ────────────────────────────────────────────────────────────
+
+  operator_city_data <- reactive({                                          # 8 forecast rows for selected operator city
+    city_weather_bike_df %>%                                                # full 5-city 24h forecast frame
+      filter(CITY_ASCII == input$operator_city)                             # keep only the operator's chosen city
+  })
+
+  operator_stations <- reactive({                                           # live GBFS stations for selected city
+    live_stations_df %>%                                                    # all cities' station availability (Phase 7B)
+      filter(CITY_ASCII == input$operator_city, IS_RENTING == TRUE)         # open stations only; skip closed/maintenance
+  })
+
+  operator_peak_demand <- reactive({                                        # peak predicted demand in the 24h window
+    max(operator_city_data()$BIKE_PREDICTION, na.rm = TRUE)                # single numeric: highest slot for this city
+  })
+
+  operator_fleet_summary <- reactive({                                      # aggregate fleet stats for the selected city
+    s <- operator_stations()                                                # live station frame
+    list(                                                                   # named list for clean downstream access
+      total_bikes    = sum(s$AVAILABLE_BIKES, na.rm = TRUE),               # bikes available right now across all stations
+      total_docks    = sum(s$AVAILABLE_DOCKS, na.rm = TRUE),               # free dock spaces right now
+      total_capacity = sum(s$CAPACITY,        na.rm = TRUE),               # total theoretical capacity (bikes + docks)
+      empty_stations = sum(s$AVAILABLE_BIKES == 0, na.rm = TRUE),          # count of stations with zero bikes
+      n_stations     = nrow(s)                                             # total operational (IS_RENTING) stations
+    )
+  })
+
+
+  # ── Map title ─────────────────────────────────────────────────────────────
+
+  output$operator_map_title <- renderUI({                                   # dynamic header for the operator map
+    tags$div(                                                               # title block inside the map-header div
+      class = "map-title",
+      tags$i(class = "glyphicon glyphicon-wrench", style = "margin-right:7px;"),  # wrench icon — operations context
+      paste0("Fleet Rebalancing View — ", input$operator_city)        # city name injected at render time
+    )
+  })
+
+
+  # ── Demand-vs-supply alert panels ─────────────────────────────────────────
+
+  output$operator_alerts <- renderUI({                                      # Yeti panel-danger/warning/success alert
+    peak  <- operator_peak_demand()                                         # peak predicted bikes for the 24h window
+    fleet <- operator_fleet_summary()                                       # fleet totals
+    total <- fleet$total_bikes                                              # bikes available across all stations now
+    empty <- fleet$empty_stations                                           # zero-bike stations count
+    n     <- fleet$n_stations                                               # total operational stations
+
+    if (n == 0) {                                                           # no GBFS data (Seoul or any fetch failure)
+      return(tags$div(
+        class = "panel panel-info",                                         # Yeti info panel — neutral, not a critical alert
+        style = "margin-bottom:0;",
+        tags$div(class = "panel-heading",
+          tags$h3(class = "panel-title",
+            tags$i(class = "glyphicon glyphicon-info-sign", style = "margin-right:6px;"),
+            "No Live Station Data"
+          )
+        ),
+        tags$div(class = "panel-body",
+          "Live GBFS data is unavailable for this city. ",
+          "Demand forecast is shown on the map."
+        )
+      ))
+    }
+
+    ratio <- if (total > 0) peak / total else Inf                          # demand-to-supply ratio (Inf when fleet empty)
+
+    # Choose alert level by ratio
+    if (is.infinite(ratio) || ratio >= 1.0) {                              # peak demand meets or exceeds all available bikes
+      panel_class <- "panel-danger"                                        # red: critical
+      icon_glyph  <- "glyphicon-warning-sign"
+      alert_title <- "Critical Supply Shortage"
+      alert_body  <- paste0(
+        "Peak demand (", scales::comma(peak), " bikes) equals or exceeds ",
+        "current availability (", scales::comma(total), " bikes). ",
+        "Immediate rebalancing required."
+      )
+    } else if (ratio >= 0.75) {                                            # demand is 75–99% of availability
+      panel_class <- "panel-warning"                                       # amber: low supply warning
+      icon_glyph  <- "glyphicon-exclamation-sign"
+      alert_title <- "Low Supply Warning"
+      alert_body  <- paste0(
+        "Peak demand is ", round(ratio * 100), "% of current availability. ",
+        "Proactive rebalancing advised before peak hours."
+      )
+    } else {                                                               # demand is under 75% of availability
+      panel_class <- "panel-success"                                       # green: supply adequate
+      icon_glyph  <- "glyphicon-ok-sign"
+      alert_title <- "Supply Adequate"
+      alert_body  <- paste0(
+        "Fleet is well-positioned. Peak demand (", scales::comma(peak), " bikes) ",
+        "is ", round(ratio * 100), "% of available supply."
+      )
+    }
+
+    main_panel <- tags$div(                                                 # primary demand-vs-supply alert
+      class = paste("panel", panel_class),
+      style = "margin-bottom:0;",
+      tags$div(class = "panel-heading",
+        tags$h3(class = "panel-title",
+          tags$i(class = paste("glyphicon", icon_glyph), style = "margin-right:6px;"),
+          alert_title
+        )
+      ),
+      tags$div(class = "panel-body", alert_body)
+    )
+
+    if (empty > 0) {                                                       # secondary panel: empty station count
+      empty_panel <- tags$div(
+        class = "panel panel-warning",
+        style = "margin-top:12px; margin-bottom:0;",                       # top margin handled inline (inside uiOutput wrapper)
+        tags$div(class = "panel-heading",
+          tags$h3(class = "panel-title",
+            tags$i(class = "glyphicon glyphicon-ban-circle", style = "margin-right:6px;"),
+            paste0(empty, " Empty Station", if (empty != 1) "s" else "")  # pluralise correctly
+          )
+        ),
+        tags$div(class = "panel-body",
+          paste0(empty, " of ", n, " stations have zero bikes. ",
+                 "Priority restock targets shown in red on the map.")
+        )
+      )
+      return(tagList(main_panel, empty_panel))                             # return both panels
+    }
+
+    main_panel                                                             # no empty stations — return single panel
+  })
+
+
+  # ── Fleet fill-rate summary with Yeti progress bar ────────────────────────
+
+  output$operator_station_stats <- renderUI({                              # dash-card: fleet fill rate + progress bar
+    fleet <- operator_fleet_summary()
+    if (fleet$n_stations == 0) return(NULL)                               # hide card if no GBFS data
+
+    fill_pct <- if (fleet$total_capacity > 0)                             # fleet-wide fill rate as integer %
+      as.integer(fleet$total_bikes / fleet$total_capacity * 100) else 0L
+
+    bar_class <- if (fill_pct < 20)  "progress-bar-danger"               # red: critically low
+                 else if (fill_pct < 60) "progress-bar-warning"          # amber: moderate
+                 else "progress-bar-success"                              # green: healthy
+
+    tags$div(class = "dash-card",
+      tags$h5("Fleet Status"),
+      tags$p(style = "font-size:12px; color:#555; margin-bottom:6px;",
+        tags$strong(scales::comma(fleet$total_bikes)), " bikes available across ",
+        tags$strong(fleet$n_stations), " stations"
+      ),
+      tags$div(class = "progress", style = "margin-bottom:4px; height:20px;",  # Bootstrap 3 progress container
+        tags$div(
+          class = paste("progress-bar", bar_class),                       # Yeti contextual colour applied here
+          role  = "progressbar",
+          style = paste0("width:", fill_pct, "%; line-height:20px; font-size:12px;"),
+          paste0(fill_pct, "% fleet capacity")                            # readable label inside the bar
+        )
+      ),
+      tags$p(style = "font-size:11px; color:#888; margin:0;",
+        scales::comma(fleet$total_docks), " dock spaces free"
+      )
+    )
+  })
+
+
+  # ── Fleet rebalancing Leaflet map ─────────────────────────────────────────
+
+  output$operator_map <- renderLeaflet({                                   # station heatmap: size = capacity, colour = fill rate
+    stations    <- operator_stations()                                     # live stations for selected city
+    city_coords <- cities_max_bike %>%                                     # city centre row for setView
+      filter(CITY_ASCII == input$operator_city)
+
+    centre_lng <- if (nrow(city_coords) > 0) city_coords$LNG[1] else 0   # fallback to 0,0 if city not in data
+    centre_lat <- if (nrow(city_coords) > 0) city_coords$LAT[1] else 20
+
+    base_map <- leaflet() %>%                                              # bare Leaflet map
+      addTiles() %>%                                                       # OpenStreetMap tile layer
+      setView(lng = centre_lng, lat = centre_lat, zoom = 13)              # centre on selected city, street-level zoom
+
+    if (nrow(stations) == 0) {                                            # no GBFS data for this city (Seoul or failure)
+      cd <- operator_city_data()                                          # fall back to forecast markers at city centre
+      return(base_map %>%
+        addMarkers(
+          data           = cd,
+          lng            = ~LNG, lat = ~LAT,
+          popup          = ~paste0("<b>", CITY_ASCII, "</b><br>",
+                                   "Forecast: ", scales::comma(BIKE_PREDICTION),
+                                   " bikes at ", FORECASTDATETIME),
+          clusterOptions = markerClusterOptions()                         # cluster 8 overlapping forecast slots
+        )
+      )
+    }
+
+    # Compute fill rate and rebalancing recommendation per station
+    stations <- stations %>%
+      mutate(
+        fill_rate    = AVAILABLE_BIKES / pmax(CAPACITY, 1L),              # proportion full; pmax avoids division by zero
+        fill_pct     = as.integer(round(fill_rate * 100)),                # integer % for popup display
+        marker_color = case_when(                                         # urgency colour
+          fill_rate < 0.20 ~ "#f04124",                                   # red: < 20% — needs restocking
+          fill_rate < 0.60 ~ "#e99002",                                   # amber: 20–60% — monitor
+          TRUE             ~ "#43ac6a"                                    # green: 60%+ — adequate or source
+        ),
+        marker_radius = as.integer(pmax(6L, pmin(20L, CAPACITY %/% 8L))),# scale 6–20px by station capacity
+        action = case_when(                                               # operator-facing recommendation text
+          fill_rate < 0.20 ~ "RESTOCK — send bikes here",
+          fill_rate > 0.80 ~ "SOURCE — bikes can be collected",
+          TRUE             ~ "BALANCED — no action needed"
+        )
+      )
+
+    base_map %>%
+      addCircleMarkers(                                                    # one circle per station
+        data        = stations,
+        lng         = ~LNG, lat = ~LAT,
+        radius      = ~marker_radius,                                     # bigger = higher capacity station
+        color       = ~marker_color,                                      # border matches fill-rate urgency
+        fillColor   = ~marker_color,
+        fillOpacity = 0.75,
+        weight      = 1.5,
+        popup = ~paste0(                                                   # HTML popup with rebalancing context
+          "<b style='font-size:13px;'>", STATION_NAME, "</b><br>",
+          "<b style='color:", marker_color, ";'>", action, "</b><br>",
+          "Fill rate: <b>", fill_pct, "%</b>",
+          " (", AVAILABLE_BIKES, " / ", CAPACITY, " bikes)<br>",
+          "<span style='color:#666;'>", AVAILABLE_DOCKS, " dock spaces free</span>"
+        )
+      )
+  })
+
+
+  # ── 24-hour forecast CSV download ─────────────────────────────────────────
+
+  output$download_forecast <- downloadHandler(                             # triggers on "Download 24h CSV" button click
+    filename = function() {                                                # dynamic filename: city + date
+      paste0(
+        "bikecast_",
+        tolower(gsub(" ", "_", input$operator_city)),                     # e.g. "new_york"
+        "_forecast_",
+        format(Sys.Date(), "%Y%m%d"),                                     # e.g. "20260507"
+        ".csv"
+      )
+    },
+    content = function(file) {                                            # write operationally relevant columns to CSV
+      operator_city_data() %>%                                            # 8 forecast slots for selected city
+        select(CITY_ASCII, FORECASTDATETIME, TEMPERATURE, HUMIDITY,       # weather context
+               WIND_SPEED, BIKE_PREDICTION, BIKE_PREDICTION_LEVEL) %>%   # demand forecast columns
+        write.csv(file, row.names = FALSE)                                # standard CSV; no row index column
+    }
+  )
+
 })  # end shinyServer
