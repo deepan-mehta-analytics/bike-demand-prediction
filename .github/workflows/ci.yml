@@ -10,20 +10,20 @@
 # server.R is intentionally NOT sourced — it calls the weather API at startup.
 # ──────────────────────────────────────────────────────────────────────────────
 
-name: CI
+name: CI                                                   # workflow name shown in GitHub Actions tab
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main ]                                     # run on every push to main
   pull_request:
-    branches: [ main ]
+    branches: [ main ]                                     # run on every PR targeting main
 
 jobs:
 
   # ── Job 1: Python dependency install + import smoke test ─────────────────────
   python-check:
-    name: Python — install & import smoke test
-    runs-on: ubuntu-latest
+    name: Python — install & import smoke test             # label shown in the Actions UI
+    runs-on: ubuntu-latest                                 # GitHub-hosted Ubuntu 24.04 runner
 
     steps:
       - name: Checkout repository
@@ -32,7 +32,7 @@ jobs:
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"                          # matches requirements.txt numpy 2.x constraint
+          python-version: "3.11"                          # numpy 2.x requires Python >= 3.10
           cache: "pip"                                    # cache pip downloads across runs
 
       - name: Install Python dependencies
@@ -40,6 +40,7 @@ jobs:
 
       - name: Python import smoke test
         run: |
+          # verify every package in requirements.txt can be imported
           python - <<'EOF'
           import pandas as pd                             # tabular data library
           import numpy as np                             # numerical arrays
@@ -58,8 +59,8 @@ jobs:
 
   # ── Job 2: R renv restore + library smoke test ───────────────────────────────
   r-check:
-    name: R — renv restore & library smoke test
-    runs-on: ubuntu-latest
+    name: R — renv restore & library smoke test           # label shown in the Actions UI
+    runs-on: ubuntu-latest                                 # GitHub-hosted Ubuntu 24.04 runner
 
     steps:
       - name: Checkout repository
@@ -67,18 +68,13 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          sudo apt-get update -qq                         # refresh apt index quietly
-          sudo apt-get install -y \
-            libcurl4-openssl-dev \                        # required by httr, curl
-            libssl-dev \                                  # required by openssl
-            libxml2-dev \                                 # required by xml2, rvest
-            libfontconfig1-dev \                          # required by systemfonts (ggplot2 chain)
-            libharfbuzz-dev \                             # required by textshaping
-            libfribidi-dev \                              # required by textshaping
-            libfreetype6-dev \                            # required by freetypeharfbuzz
-            libpng-dev \                                  # required by png, ragg
-            libtiff5-dev \                                # required by tiff
-            libjpeg-dev                                   # required by jpeg
+          sudo apt-get update -qq                                   # refresh apt package index
+          # R HTTP/SSL/XML stack — required by httr, openssl, xml2
+          sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev
+          # R text rendering stack — required by systemfonts -> textshaping -> ragg (ggplot2 chain)
+          sudo apt-get install -y libfontconfig1-dev libharfbuzz-dev libfribidi-dev libfreetype6-dev
+          # R image format stack — required by png, tiff, jpeg device packages
+          sudo apt-get install -y libpng-dev libtiff-dev libjpeg-dev
 
       - name: Set up R 4.4.3
         uses: r-lib/actions/setup-r@v2
@@ -89,11 +85,12 @@ jobs:
       - name: Restore renv library (with cache)
         uses: r-lib/actions/setup-renv@v2
         with:
-          cache-version: 1                               # increment to bust cache if restore fails
+          cache-version: 1                               # increment this to bust the cache on next run
 
       - name: R library smoke test
-        shell: bash
+        shell: bash                                       # explicit bash for heredoc syntax
         run: |
+          # verify all key Shiny app packages load from the restored renv library
           Rscript - <<'EOF'
           pkgs <- c("shiny", "shinyjs", "shinythemes",   # Shiny app framework and themes
                     "dplyr", "ggplot2", "tidyr",          # data manipulation and visualisation
@@ -113,10 +110,11 @@ jobs:
           EOF
 
       - name: Verify model.csv is readable
-        shell: bash
+        shell: bash                                       # explicit bash for consistent quoting
         run: |
+          # assert the IBM Shiny model file is present and non-empty
           Rscript -e "
-          df <- read.csv('data/processed/model.csv')      # load IBM Shiny model file
-          stopifnot(nrow(df) > 0)                         # assert file has data rows
+          df <- read.csv('data/processed/model.csv')      # load IBM linear model coefficients
+          stopifnot(nrow(df) > 0)                         # fail fast if file is empty or missing
           cat('model.csv OK:', nrow(df), 'rows,', ncol(df), 'cols\n')
           "
