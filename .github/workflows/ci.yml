@@ -1,0 +1,122 @@
+# .github/workflows/ci.yml
+# ──────────────────────────────────────────────────────────────────────────────
+# Continuous Integration — Bike Demand Prediction
+#
+# Two independent jobs run in parallel:
+#   1. python-check  — install deps + import smoke test (< 2 min)
+#   2. r-check       — renv restore + library smoke test (< 5 min cached)
+#
+# Neither job runs notebooks (too slow) or calls the OpenWeather API.
+# server.R is intentionally NOT sourced — it calls the weather API at startup.
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  # ── Job 1: Python dependency install + import smoke test ─────────────────────
+  python-check:
+    name: Python — install & import smoke test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4                          # clone repo at current ref
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"                          # matches requirements.txt numpy 2.x constraint
+          cache: "pip"                                    # cache pip downloads across runs
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt              # install all 9 pinned packages
+
+      - name: Python import smoke test
+        run: |
+          python - <<'EOF'
+          import pandas as pd                             # tabular data library
+          import numpy as np                             # numerical arrays
+          import sklearn                                  # ML model classes
+          import matplotlib                               # plotting backend
+          import seaborn                                  # statistical visualisation
+          import scipy                                    # scientific computing utilities
+          import joblib                                   # model serialisation (pkl files)
+          import requests                                 # HTTP client for API calls
+          import bs4                                      # HTML parsing (pkg name: beautifulsoup4)
+          print("Python smoke test passed.")
+          print(f"  pandas     {pd.__version__}")
+          print(f"  numpy      {np.__version__}")
+          print(f"  sklearn    {sklearn.__version__}")
+          EOF
+
+  # ── Job 2: R renv restore + library smoke test ───────────────────────────────
+  r-check:
+    name: R — renv restore & library smoke test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4                          # clone repo at current ref
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq                         # refresh apt index quietly
+          sudo apt-get install -y \
+            libcurl4-openssl-dev \                        # required by httr, curl
+            libssl-dev \                                  # required by openssl
+            libxml2-dev \                                 # required by xml2, rvest
+            libfontconfig1-dev \                          # required by systemfonts (ggplot2 chain)
+            libharfbuzz-dev \                             # required by textshaping
+            libfribidi-dev \                              # required by textshaping
+            libfreetype6-dev \                            # required by freetypeharfbuzz
+            libpng-dev \                                  # required by png, ragg
+            libtiff5-dev \                                # required by tiff
+            libjpeg-dev                                   # required by jpeg
+
+      - name: Set up R 4.4.3
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.4.3"                             # pin to match renv.lock R version
+          use-public-rspm: true                          # use Posit PPM for pre-built Ubuntu binaries
+
+      - name: Restore renv library (with cache)
+        uses: r-lib/actions/setup-renv@v2
+        with:
+          cache-version: 1                               # increment to bust cache if restore fails
+
+      - name: R library smoke test
+        shell: bash
+        run: |
+          Rscript - <<'EOF'
+          pkgs <- c("shiny", "shinyjs", "shinythemes",   # Shiny app framework and themes
+                    "dplyr", "ggplot2", "tidyr",          # data manipulation and visualisation
+                    "leaflet", "randomForest",            # interactive map and ML model
+                    "httr", "jsonlite",                   # API calls and JSON parsing
+                    "readr", "scales", "lubridate")       # CSV reading, formatting, date handling
+          for (p in pkgs) {                               # iterate each required package
+            tryCatch(
+              library(p, character.only = TRUE),          # attempt to load from renv library
+              error = function(e) stop(paste("Failed to load:", p, "\n", e$message))
+            )
+          }
+          cat("R smoke test passed. All packages loaded successfully.\n")
+          cat("  shiny        ", as.character(packageVersion("shiny")), "\n")
+          cat("  randomForest ", as.character(packageVersion("randomForest")), "\n")
+          cat("  leaflet      ", as.character(packageVersion("leaflet")), "\n")
+          EOF
+
+      - name: Verify model.csv is readable
+        shell: bash
+        run: |
+          Rscript -e "
+          df <- read.csv('data/processed/model.csv')      # load IBM Shiny model file
+          stopifnot(nrow(df) > 0)                         # assert file has data rows
+          cat('model.csv OK:', nrow(df), 'rows,', ncol(df), 'cols\n')
+          "
