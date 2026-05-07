@@ -254,7 +254,7 @@ shinyUI(
                                  selectInput(
                                    inputId  = "city_dropdown",
                                    label    = NULL,
-                                   choices  = c("All", "Seoul", "Suzhou", "London", "New York", "Paris"),
+                                   choices  = c("All", "Seoul", "London", "New York", "Paris", "Chicago"),  # Suzhou removed (no GBFS); Chicago added Phase 7A
                                    selected = "Paris"   # ← Default to Paris so charts appear immediately
                                  ),
                                  tags$p(style = "font-size:11px; color:#888; margin:4px 0 0;",

@@ -1,0 +1,95 @@
+# config/cities.yaml
+# ──────────────────────────────────────────────────────────────────────────────
+# City configuration for the Bike Demand Prediction dashboard.
+#
+# Each city entry defines:
+#   - Display name and geographic coordinates
+#   - GBFS auto-discovery URL (or equivalent live-station API)
+#   - BigQuery public dataset (where available) for historical ride data
+#   - Timezone (used for demand timeline alignment)
+#   - Notes on API key requirements or non-standard feed formats
+#
+# GBFS standard feeds consumed by gbfs_client.R:
+#   station_information.json  — static: station name, lat, lng, capacity
+#   station_status.json       — live: available_bikes, available_docks, is_renting
+#
+# GCP-ready: set USE_PUBSUB=true to stream station_status updates to Pub/Sub.
+# Local mode (USE_PUBSUB=false): station data written to data/live/ as JSON files.
+# ──────────────────────────────────────────────────────────────────────────────
+
+cities:
+
+  # ── Seoul ─────────────────────────────────────────────────────────────────
+  - name: "Seoul"                                         # display name in Shiny UI
+    name_ascii: "Seoul"                                   # ASCII form for file naming
+    lat: 37.5833                                          # city centre latitude
+    lng: 127.0000                                         # city centre longitude
+    country: "Korea, South"                               # country display name
+    iso2: "KR"                                            # ISO 3166-1 alpha-2 code
+    timezone: "Asia/Seoul"                                # IANA timezone identifier
+    gbfs_autodiscovery: null                              # Seoul does not use GBFS standard
+    live_station_api: "https://openapi.seoul.go.kr/openapi/service/rest/CycleInfo/getBicycleStationInfo"
+    live_api_key_env: "SEOUL_OPEN_API_KEY"               # env var holding the free API key
+    bigquery_dataset: null                                # no BigQuery public dataset for Seoul
+    bigquery_project: null                                # BQ project (null = not applicable)
+    notes: "Requires free API key from data.seoul.go.kr. Register at https://data.seoul.go.kr"
+
+  # ── London ────────────────────────────────────────────────────────────────
+  - name: "London"                                        # display name in Shiny UI
+    name_ascii: "London"                                  # ASCII form for file naming
+    lat: 51.5072                                          # city centre latitude
+    lng: -0.1275                                          # city centre longitude
+    country: "United Kingdom"                             # country display name
+    iso2: "GB"                                            # ISO 3166-1 alpha-2 code
+    timezone: "Europe/London"                             # IANA timezone identifier
+    gbfs_autodiscovery: null                              # TfL uses its own API, not GBFS spec
+    live_station_api: "https://api.tfl.gov.uk/bikepoint" # TfL BikePoint: returns array of stations
+    live_api_key_env: null                                # TfL BikePoint is free; no key required
+    bigquery_dataset: "london_bicycles"                   # BQ dataset name
+    bigquery_project: "bigquery-public-data"              # BQ project hosting the public dataset
+    notes: "TfL BikePoint returns CommonName, Lat, Lon, NbBikes, NbEmptyDocks per station."
+
+  # ── New York ──────────────────────────────────────────────────────────────
+  - name: "New York"                                      # display name in Shiny UI
+    name_ascii: "New York"                                # ASCII form for file naming
+    lat: 40.6943                                          # city centre latitude
+    lng: -73.9249                                         # city centre longitude
+    country: "United States"                              # country display name
+    iso2: "US"                                            # ISO 3166-1 alpha-2 code
+    timezone: "America/New_York"                          # IANA timezone identifier
+    gbfs_autodiscovery: "https://gbfs.citibikenyc.com/gbfs/en/gbfs.json"   # GBFS v2 autodiscovery
+    live_station_api: "https://gbfs.citibikenyc.com/gbfs/en/station_status.json"   # live status feed
+    live_api_key_env: null                                # Citi Bike GBFS is fully public
+    bigquery_dataset: "new_york_citibike"                 # BQ dataset name
+    bigquery_project: "bigquery-public-data"              # BQ project hosting the public dataset
+    notes: "Standard GBFS v2. station_information.json for static data, station_status.json for live."
+
+  # ── Paris ─────────────────────────────────────────────────────────────────
+  - name: "Paris"                                         # display name in Shiny UI
+    name_ascii: "Paris"                                   # ASCII form for file naming
+    lat: 48.8566                                          # city centre latitude
+    lng: 2.3522                                           # city centre longitude
+    country: "France"                                     # country display name
+    iso2: "FR"                                            # ISO 3166-1 alpha-2 code
+    timezone: "Europe/Paris"                              # IANA timezone identifier
+    gbfs_autodiscovery: "https://velib-metropole-opendata.smovengo.fr/opendata/Velib_Metropole/gbfs.json"
+    live_station_api: "https://velib-metropole-opendata.smovengo.fr/opendata/Velib_Metropole/station_status.json"
+    live_api_key_env: null                                # Vélib' GBFS is fully public
+    bigquery_dataset: null                                # no BigQuery public dataset for Paris
+    bigquery_project: null                                # BQ project (null = not applicable)
+    notes: "Standard GBFS v2. Vélib' Métropole operator is Smovengo."
+
+  # ── Chicago ───────────────────────────────────────────────────────────────
+  - name: "Chicago"                                       # display name in Shiny UI; replaces Suzhou
+    name_ascii: "Chicago"                                 # ASCII form for file naming
+    lat: 41.8781                                          # city centre latitude
+    lng: -87.6298                                         # city centre longitude
+    country: "United States"                              # country display name
+    iso2: "US"                                            # ISO 3166-1 alpha-2 code
+    timezone: "America/Chicago"                           # IANA timezone identifier
+    gbfs_autodiscovery: "https://gbfs.divvybikes.com/gbfs/en/gbfs.json"    # GBFS v2 autodiscovery
+    live_station_api: "https://gbfs.divvybikes.com/gbfs/en/station_status.json"  # live status feed
+    live_api_key_env: null                                # Divvy GBFS is fully public
+    bigquery_dataset: null                                # no BigQuery public dataset for Chicago/Divvy
+    bigquery_project: null                                # BQ project (null = not applicable)
+    notes: "Divvy (Lyft) GBFS v2. Added in Phase 7A to replace Suzhou (which lacked GBFS coverage)."

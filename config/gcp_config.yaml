@@ -1,0 +1,44 @@
+# config/gcp_config.yaml
+# ──────────────────────────────────────────────────────────────────────────────
+# GCP project settings for the Pub/Sub + Dataflow streaming pipeline.
+#
+# LOCAL MODE  (USE_PUBSUB=false, default):
+#   - gbfs_to_pubsub.py writes JSON to data/live/<city>_station_status.json
+#   - dataflow_job.py reads from data/live/ using Apache Beam DirectRunner
+#   - No GCP credentials required; no billing
+#
+# GCP MODE    (USE_PUBSUB=true):
+#   - gbfs_to_pubsub.py publishes to the Pub/Sub topic below
+#   - dataflow_job.py runs on Dataflow using DataflowRunner
+#   - Requires: gcloud auth application-default login + roles below
+#
+# Required GCP roles (GCP mode only):
+#   - roles/pubsub.publisher      (pipeline/gbfs_to_pubsub.py)
+#   - roles/dataflow.developer    (pipeline/dataflow_job.py)
+#   - roles/bigquery.dataEditor   (pipeline/dataflow_job.py → BQ write)
+#   - roles/storage.objectAdmin   (Dataflow staging bucket)
+#
+# GDE exam topics demonstrated:
+#   - Ingestion:         GBFS → Pub/Sub
+#   - Stream processing: Dataflow (Apache Beam) windowed aggregation
+#   - Storage:           BigQuery partitioned by city + event_hour
+#   - Analysis:          BigQuery SQL for demand pattern queries
+# ──────────────────────────────────────────────────────────────────────────────
+
+gcp:
+  project_id: "${GCP_PROJECT_ID}"                        # override with your GCP project ID
+  region: "us-central1"                                  # Dataflow job region
+  staging_bucket: "${GCP_STAGING_BUCKET}"                # GCS bucket for Dataflow temp files
+
+pubsub:
+  topic_id: "gbfs-station-updates"                       # Pub/Sub topic receiving live GBFS payloads
+  subscription_id: "gbfs-station-updates-sub"            # subscription consumed by Dataflow
+
+bigquery:
+  dataset_id: "bike_demand"                              # BQ dataset created in your GCP project
+  station_events_table: "station_events"                 # partitioned table: city, station_id, timestamp, available_bikes
+  demand_forecast_table: "demand_forecast"               # output table written by FastAPI prediction pipeline
+
+local_mode:
+  live_data_dir: "data/live"                             # local directory for GBFS JSON snapshots
+  duckdb_path: "data/bike_demand.duckdb"                 # local DuckDB file replacing BigQuery in local mode

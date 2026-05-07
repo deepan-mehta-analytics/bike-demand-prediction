@@ -31,7 +31,7 @@ The R pipeline benchmarks six model classes on a chronological 80/20 held-out sp
 - **End-to-end ML** — ETL → SQL EDA → regularised regression → Random Forest → deployed dashboard, all reproducible from source
 - **Six models benchmarked** — Baseline OLS, Refined OLS, Ridge, Lasso, Elastic Net, and Random Forest evaluated on a chronological 80/20 held-out split
 - **Live weather integration** — Real-time OpenWeather 5-day forecast API feeds the Shiny dashboard with 24-hour demand predictions
-- **Five global cities** — Seoul, Suzhou, London, New York, Paris rendered on an interactive Leaflet map with colour-coded demand markers
+- **Five global cities** — Seoul, London, New York, Paris, Chicago rendered on an interactive Leaflet map with colour-coded demand markers
 - **IBM Capstone structure** — Three notebook tracks: self-built Python pipeline, self-built R pipeline, and IBM-mandated graded submission R pipeline
 
 ---
@@ -336,7 +336,7 @@ A professional three-column dashboard built on the **Yeti Bootswatch** theme.
 | 🟡 Medium | 1,000 – 3,000 | Yellow, radius 10 |
 | 🔴 High | > 3,000 | Red, radius 12 |
 
-**Cities covered:** Seoul · Suzhou · London · New York · Paris
+**Cities covered:** Seoul · London · New York · Paris · Chicago
 
 ---
 
