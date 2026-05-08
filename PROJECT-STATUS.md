@@ -11,8 +11,8 @@ Both repos form a single portfolio system. Track them together here.
 
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
-| **bike_demand_prediction** (this repo) | R Shiny dashboard | Phase 7H complete — 6 cities | ✅ Done | `c5e9c11` |
-| **bike-demand-ml-system** | Python FastAPI + ML training | Phase 2 complete — 4 cities trained | ✅ Done | `b359253` |
+| **bike_demand_prediction** (this repo) | R Shiny dashboard | Phase 7H complete — 6 cities; v1.0.0 released | ✅ Done | `432335d` |
+| **bike-demand-ml-system** | Python FastAPI + ML training | Phase 3 in progress — GHCR publish wired; Cloud Run pending | 🔄 In Progress | `0d9f73a` |
 
 ### Trained City Models (Python repo)
 
@@ -36,15 +36,19 @@ Both repos form a single portfolio system. Track them together here.
 
 ## ✅ Completed
 
-### v1.0.0 — Released 2026-05-07
+### v1.0.0 — Released 2026-05-08 (GitHub release published)
 * Seoul Bike Sharing data pipeline: ingestion → SQL EDA → six model benchmarks
 * Best model: Random Forest R²=0.730, RMSE=333.89 bikes/hr (R pipeline)
-* Shiny dashboard: OpenWeather 5-day forecast → 24-hr demand for 5 global cities
-* Leaflet interactive map with colour-coded demand markers
+* Shiny dashboard: OpenWeather 5-day forecast → 24-hr demand for 6 global cities
+* Leaflet interactive map with colour-coded demand markers; 3-tab UI (Live Map, Operator UC1, Rider UC2)
+* GBFS live station data: Capital Bikeshare v2 (DC), standard GBFS v2 (NYC/Paris/Chicago), TfL BikePoint (London)
+* FastAPI integration: `httr::POST` to Python RF endpoint; per-city routing via `group_modify()`
 * IBM Capstone graded tracks (R + Python notebooks)
 * `renv.lock` — R 4.4.3, 139 packages pinned
-* MIT LICENSE + GitHub Actions CI (R + Python smoke tests, model.csv check)
-* Tagged `v1.0.0`
+* `Dockerfile.shiny` — `rocker/shiny:4.4.3`; renv restore via Posit PPM binaries
+* CI: r-check + docker-compose-build with GHA apt + Docker layer caching
+* MIT LICENSE + full GitHub release notes published
+* Companion release: bike-demand-ml-system `v1.0.0` published same date
 
 ### v1.1 — Phases 7A–7H Complete
 
@@ -112,7 +116,7 @@ Both repos form a single portfolio system. Track them together here.
 * pytest / testthat unit tests for ETL and model evaluation functions
 * Seoul GBFS integration (free API key at data.seoul.go.kr)
 * Train Paris and Chicago models to replace Seoul proxy (requires sourcing data)
-* Expand to 8 cities (Washington DC, San Francisco, or Amsterdam)
+* Expand to 8 cities (San Francisco or Amsterdam — Washington DC already added)
 
 ---
 
