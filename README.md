@@ -8,7 +8,7 @@ This project delivers a full-stack predictive analytics system for bike-sharing 
 
 The R pipeline benchmarks six model classes on a chronological 80/20 held-out split, achieving a Random Forest with R²=0.730 (RMSE 333.89 bikes/hr) — a 39% improvement over the baseline linear model. The Bikecast Shiny dashboard provides live 24-hour demand forecasts for six global cities rendered on an interactive Leaflet map, with city drill-down showing live GBFS station availability markers, demand-band filtering, and expand-to-modal charts.
 
-**v1.1 is shipped.** Phase 7 extended the dashboard into two real end-user tools: an **Operator tab** (fleet rebalancing alerts, demand vs. station capacity) and a **Rider tab** (live availability score, best-time recommendation, natural-language summary). The prediction backend is upgraded to a Python FastAPI inference service (RF RMSE 173 bikes/hr) replacing the linear model.csv; Docker Compose runs the full stack locally. Next: **GCP streaming pipeline** — GBFS live feeds → Pub/Sub → Dataflow → BigQuery (v1.2, Phase 7F).
+**v1.1 is shipped.** Phase 7 extended the dashboard into two real end-user tools: an **Operator tab** (fleet rebalancing alerts, demand vs. station capacity) and a **Rider tab** (live availability score, best-time recommendation, natural-language summary). The prediction backend is upgraded to a Python FastAPI inference service (RF RMSE 173 bikes/hr) replacing the linear model.csv; Docker Compose runs the full stack locally. The Python API is now **live on GCP Cloud Run** (`https://bike-demand-api-246440913351.us-central1.run.app`) — set `USE_FASTAPI=true` and `FASTAPI_URL` to the Cloud Run URL to connect. Next: **GCP streaming pipeline** — GBFS live feeds → Pub/Sub → Dataflow → BigQuery (v1.2, Phase 7F).
 
 ### End-to-end ML pipeline: raw Seoul data → six competing models → live global demand forecast
 
@@ -365,7 +365,7 @@ A professional three-column dashboard built on the **Yeti Bootswatch** theme.
 - **Docker Compose deployment** — `docker compose up` runs the full Shiny + FastAPI stack locally *(Phase 7H ✅)*
 
 **In development (v1.2):**
-- **GCP Streaming Pipeline** — GBFS feeds → Pub/Sub → Dataflow → BigQuery *(Phase 7F)*
+- **GCP Streaming Pipeline** — GBFS feeds → Pub/Sub → Dataflow → BigQuery *(Phase 7F — unblocked: Python Cloud Run live; waiting on Python Phase 4 Dataflow deploy)*
 - **Seoul live stations** — GBFS integration pending Seoul Open API key registration
 
 **Demand bands:**
@@ -441,7 +441,7 @@ docker run -p 3838:3838 -e OPENWEATHER_KEY=your_actual_key_here bikecast-shiny:l
 
 The app will be available at `http://localhost:3838/`.
 
-**Full stack with Docker Compose** (Shiny + FastAPI; requires the [bike-demand-ml-system](https://github.com/deepan-mehta-analytics/bike-demand-ml-system) repo cloned as a sibling directory):
+**Full stack with Docker Compose** (Shiny + FastAPI locally; requires the [bike-demand-ml-system](https://github.com/deepan-mehta-analytics/bike-demand-ml-system) repo cloned as a sibling directory):
 
 ```bash
 # Create .env in the repo root:
@@ -451,6 +451,19 @@ docker compose up
 ```
 
 Shiny at `http://localhost:3838/` · FastAPI at `http://localhost:8000/docs`.
+
+**Cloud Run option** (Shiny only; FastAPI served from GCP):
+
+```bash
+docker build -f Dockerfile.shiny -t bikecast-shiny:latest .
+docker run -p 3838:3838 \
+  -e OPENWEATHER_KEY=your_actual_key_here \
+  -e USE_FASTAPI=true \
+  -e FASTAPI_URL=https://bike-demand-api-246440913351.us-central1.run.app \
+  bikecast-shiny:latest
+```
+
+Shiny at `http://localhost:3838/` · FastAPI served from Cloud Run (always up, no sibling repo needed).
 
 ---
 

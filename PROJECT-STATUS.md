@@ -11,8 +11,8 @@ Both repos form a single portfolio system. Track them together here.
 
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
-| **bike_demand_prediction** (this repo) | R Shiny dashboard | Phase 7H complete — 6 cities; v1.0.0 released | ✅ Done | `8e85de8` |
-| **bike-demand-ml-system** | Python FastAPI + ML training | Phase 3 in progress — GHCR publish wired; Cloud Run pending | 🔄 In Progress | `5ccd353` |
+| **bike_demand_prediction** (this repo) | R Shiny dashboard | Phase 7H complete — 6 cities; v1.0.0 released | ✅ Done | `0ecb43a` |
+| **bike-demand-ml-system** | Python FastAPI + ML training | Phase 3 DONE — Cloud Run live at https://bike-demand-api-246440913351.us-central1.run.app | ✅ Done | `1866ee0` |
 
 ### Trained City Models (Python repo)
 
@@ -30,7 +30,7 @@ Both repos form a single portfolio system. Track them together here.
 | Repo | Next Phase | Dependency |
 |------|-----------|------------|
 | bike_demand_prediction | Phase 7F — GCP Streaming Pipeline | Waits on Python Phase 4 (Pub/Sub + Dataflow) |
-| bike-demand-ml-system | Phase 3 — Cloud Run Deployment | None — can start now |
+| bike-demand-ml-system | Phase 4 — Pub/Sub + Dataflow Pipeline | None — can start now |
 
 ---
 
@@ -122,8 +122,6 @@ Both repos form a single portfolio system. Track them together here.
 
 ## 🚀 Next Step
 
-**Phase 7F — GCP Streaming Pipeline** (blocked until Python repo Phase 3/4 complete).
-In the meantime: watch for Python repo Cloud Run deployment, then update `FASTAPI_URL`
-env var in `docker-compose.yml` to point at the live Cloud Run URL.
+**Phase 7F — GCP Streaming Pipeline** (waiting on Python Phase 4 — Pub/Sub + Dataflow). Python Phase 3 is complete: Cloud Run API is live at `https://bike-demand-api-246440913351.us-central1.run.app`. For cloud deployment, set `FASTAPI_URL=https://bike-demand-api-246440913351.us-central1.run.app`; docker-compose.yml retains `http://fastapi:8000` for local development.
 
 Resume with: `"resume bike demand prediction project"`
