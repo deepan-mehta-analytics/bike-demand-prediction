@@ -104,7 +104,7 @@ The Seoul Bike Sharing dataset provides 8,760 hourly observations (Jan 2017 – 
 └──────────────────────────┬───────────────────────────────────────┘
                            │
 ┌──────────────────────────▼───────────────────────────────────────┐
-│          REAL USE-CASE LAYER  (v1.1 — in development)            │
+│          REAL USE-CASE LAYER  (v1.1 shipped / v1.2 in development)│
 │                                                                  │
 │  GBFS live feeds ──► Pub/Sub topic ──► Dataflow pipeline         │
 │                                              │                   │
