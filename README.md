@@ -8,7 +8,7 @@ This project delivers a full-stack predictive analytics system for bike-sharing 
 
 The R pipeline benchmarks six model classes on a chronological 80/20 held-out split, achieving a Random Forest with R²=0.730 (RMSE 333.89 bikes/hr) — a 39% improvement over the baseline linear model. The Bikecast Shiny dashboard provides live 24-hour demand forecasts for six global cities rendered on an interactive Leaflet map, with city drill-down showing live GBFS station availability markers, demand-band filtering, and expand-to-modal charts.
 
-**v1.1 is shipped.** Phase 7 extended the dashboard into two real end-user tools: an **Operator tab** (fleet rebalancing alerts, demand vs. station capacity) and a **Rider tab** (live availability score, best-time recommendation, natural-language summary). The prediction backend is upgraded to a Python FastAPI inference service (RF RMSE 173 bikes/hr) replacing the linear model.csv; Docker Compose runs the full stack locally. The Python API is now **live on GCP Cloud Run** (`https://bike-demand-api-246440913351.us-central1.run.app`) — set `USE_FASTAPI=true` and `FASTAPI_URL` to the Cloud Run URL to connect. Next: **GCP streaming pipeline** — GBFS live feeds → Pub/Sub → Dataflow → BigQuery (v1.2, Phase 7F).
+**v1.1 is shipped.** Phase 7 extended the dashboard into two real end-user tools: an **Operator tab** (fleet rebalancing alerts, demand vs. station capacity) and a **Rider tab** (live availability score, best-time recommendation, natural-language summary). The prediction backend is upgraded to a Python FastAPI inference service (RF RMSE 173 bikes/hr) replacing the linear model.csv; Docker Compose runs the full stack locally. The Python API is **live on GCP Cloud Run** (`https://bike-demand-api-246440913351.us-central1.run.app`). Next: **v1.2 — GCP Streaming Dashboard** (Phase 7F) — the Python streaming pipeline is live (v3.0.0); `bike_demand.station_snapshots` in BigQuery is populated with real GBFS data. This repo's work is integrating that table into the Shiny dashboard via `bigrquery`.
 
 ### End-to-end ML pipeline: raw Seoul data → six competing models → live global demand forecast
 
@@ -365,7 +365,7 @@ A professional three-column dashboard built on the **Yeti Bootswatch** theme.
 - **Docker Compose deployment** — `docker compose up` runs the full Shiny + FastAPI stack locally *(Phase 7H ✅)*
 
 **In development (v1.2):**
-- **GCP Streaming Pipeline** — GBFS feeds → Pub/Sub → Dataflow → BigQuery *(Phase 7F — unblocked: Python Cloud Run live; waiting on Python Phase 4 Dataflow deploy)*
+- **GCP Streaming Dashboard** — query live `bike_demand.station_snapshots` from Shiny via `bigrquery`; display 5-min windowed avg/min/max bikes per station *(Phase 7F — Python pipeline live as of 2026-05-15; BigQuery table populated)*
 - **Seoul live stations** — GBFS integration pending Seoul Open API key registration
 
 **Demand bands:**
@@ -546,11 +546,11 @@ The capstone presentation covers the full pipeline from data collection through 
 - [x] "Best time to ride today" recommendation
 - [x] Natural-language summary: available bikes at nearest station
 
-#### Phase 7F — GCP Streaming Dashboard ← **Priority 3 (v1.2.0 — after Python Phase 4)** 🔲
-- [ ] `pipeline/gbfs_to_pubsub.py` — GBFS poller → Pub/Sub (`USE_PUBSUB=false` runs locally)
-- [ ] `pipeline/dataflow_job.py` — Apache Beam: Pub/Sub → BigQuery windowed aggregation
-- [ ] Local mode: DirectRunner + DuckDB (no GCP account required)
-- Pipeline code lives in `bike-demand-ml-system`; this repo integrates the BigQuery output into the Shiny dashboard
+#### Phase 7F — GCP Streaming Dashboard ← **Priority 1 (v1.2.0 — UNBLOCKED)** 🔲
+- Python pipeline live ✅ — `bike_demand.station_snapshots` in BigQuery populated with real GBFS data (Python repo v3.0.0, 2026-05-15)
+- [ ] Add `bigrquery` to renv; query `bike_demand.station_snapshots` from Shiny
+- [ ] Surface live 5-min windowed avg/min/max bike availability on the dashboard
+- Pipeline code lives in `bike-demand-ml-system` (complete); this repo integrates the BigQuery output into the Shiny UI
 
 #### Phase 7G — Documentation ✅
 - [x] README architecture diagram updated with full v1.1 stack
