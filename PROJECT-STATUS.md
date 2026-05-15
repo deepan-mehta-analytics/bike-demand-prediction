@@ -11,8 +11,8 @@ Both repos form a single portfolio system. Track them together here.
 
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
-| **bike_demand_prediction** (this repo) | R Shiny dashboard | Phase 7H complete — 6 cities; v1.0.0 released | ✅ Done | `b2b9850` |
-| **bike-demand-ml-system** | Python FastAPI + ML training | Phase 4 complete — GBFS→Pub/Sub→Dataflow→BigQuery end-to-end verified (v3.0.0) | ✅ Done | `e8602c7` |
+| **bike_demand_prediction** (this repo) | R Shiny dashboard | Phase 7H complete — 6 cities; v1.1.0 released; Phase 7F next | ✅ Done | `e799f44` |
+| **bike-demand-ml-system** | Python FastAPI + ML training | Phase 4 complete — GBFS→Pub/Sub→Dataflow→BigQuery end-to-end verified (v3.0.0) | ✅ Done | `e6189e3` |
 
 ### Trained City Models (Python repo)
 
@@ -140,6 +140,6 @@ Both repos form a single portfolio system. Track them together here.
 
 **Phase 7F — GCP Streaming Dashboard is the active next task (Priority 1, v1.2.0).** Python Phase 4 complete (v3.0.0 — 2026-05-15). BigQuery table `bike_demand.station_snapshots` is live with real GBFS data. This repo's work: add `bigrquery` R package, query the station_snapshots table from Shiny, and display live 5-minute windowed bike availability on the dashboard.
 
-*Python repo v3.0.0 shipped 2026-05-15 — commit `e8602c7`.*
+*Python repo v3.0.0 shipped 2026-05-15 — latest commit `e6189e3`.*
 
 Resume with: `"resume bike demand prediction project"`
