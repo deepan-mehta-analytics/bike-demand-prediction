@@ -11,8 +11,8 @@ Both repos form a single portfolio system. Track them together here.
 
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
-| **bike_demand_prediction** (this repo) | R Shiny dashboard | Phase 7H complete — 6 cities; v1.0.0 released | ✅ Done | `0ecb43a` |
-| **bike-demand-ml-system** | Python FastAPI + ML training | Phase 3 DONE — Cloud Run live at https://bike-demand-api-246440913351.us-central1.run.app | ✅ Done | `1866ee0` |
+| **bike_demand_prediction** (this repo) | R Shiny dashboard | Phase 7H complete — 6 cities; v1.0.0 released | ✅ Done | `e45ced8` |
+| **bike-demand-ml-system** | Python FastAPI + ML training | Phase 3 DONE — Cloud Run live at https://bike-demand-api-246440913351.us-central1.run.app | ✅ Done | `5ea4a09` |
 
 ### Trained City Models (Python repo)
 
@@ -25,12 +25,18 @@ Both repos form a single portfolio system. Track them together here.
 | Paris | — | — (Seoul fallback) | Paris | Seoul proxy |
 | Chicago | — | — (Seoul fallback) | Chicago | Seoul proxy |
 
-### Next Milestones (Both Repos)
+### Next Milestones (Both Repos) — Priority Ordered
 
-| Repo | Next Phase | Dependency |
-|------|-----------|------------|
-| bike_demand_prediction | Phase 7F — GCP Streaming Pipeline | Waits on Python Phase 4 (Pub/Sub + Dataflow) |
-| bike-demand-ml-system | Phase 4 — Pub/Sub + Dataflow Pipeline | None — can start now |
+| Priority | Repo | Phase | Target Version | Dependency |
+|----------|------|-------|---------------|------------|
+| **1** | bike-demand-ml-system | Phase 6 — Observability | v2.1.0 | None — start now |
+| **2** | bike-demand-ml-system | Phase 4 — Pub/Sub + Dataflow | v3.0.0 | None — unblocked |
+| **3** | bike_demand_prediction | Phase 7F — GCP Streaming Dashboard | v1.2.0 | Waits on Python Phase 4 |
+| **4** | bike-demand-ml-system | Phase 5 — Vertex AI + MLflow | v4.0.0 | Best after streaming data exists |
+| **5** | bike_demand_prediction | Backlog — Paris/Chicago models | v1.3.0 | Data sourcing required |
+| **6** | Both | Backlog — testthat / pytest | — | None |
+| **7** | bike_demand_prediction | Backlog — Seoul GBFS | — | External API key |
+| **8** | bike_demand_prediction | Backlog — City expansion (SF/Amsterdam) | — | Data sourcing required |
 
 ---
 
@@ -105,23 +111,36 @@ Both repos form a single portfolio system. Track them together here.
 
 ## 🔜 Roadmap
 
-### Phase 7F — GCP Streaming Pipeline ← **next (after Python Phase 4)**
+### Phase 7F — GCP Streaming Dashboard ← Priority 3 (v1.2.0 — after Python Phase 4)
 * `pipeline/gbfs_to_pubsub.py` — GBFS poller → Pub/Sub topic (`USE_PUBSUB=false` for local)
 * `pipeline/dataflow_job.py` — Apache Beam: Pub/Sub → BigQuery windowed aggregation
 * Local mode: DirectRunner + DuckDB (no GCP account required for dev)
-* **Lives in the Python repo** (`bike-demand-ml-system`), not here
+* **Pipeline lives in the Python repo** (`bike-demand-ml-system`); this repo integrates BigQuery output into Shiny dashboard
 * This repo: `config/gcp_config.yaml` already created (connection settings only)
 
-### Backlog
+### Backlog — Priority 5: Paris/Chicago models (v1.3.0)
+* Train Paris RF model — source Vélib' Métropole open data (Paris OpenData portal)
+* Train Chicago RF model — source Divvy trip data (Chicago Data Portal)
+* Removes Seoul fallback proxy for both cities; improves prediction accuracy
+
+### Backlog — Priority 6: Testing
 * pytest / testthat unit tests for ETL and model evaluation functions
-* Seoul GBFS integration (free API key at data.seoul.go.kr)
-* Train Paris and Chicago models to replace Seoul proxy (requires sourcing data)
-* Expand to 8 cities (San Francisco or Amsterdam — Washington DC already added)
+* Engineering rigour; fill-in work between major phases
+
+### Backlog — Priority 7: Seoul GBFS
+* Seoul live station markers (free API key required at data.seoul.go.kr)
+* External dependency — low ROI until key is obtained
+
+### Backlog — Priority 8: City expansion
+* Expand to 8 cities — San Francisco (Ford GoBike) or Amsterdam (OV-fiets)
+* Requires data sourcing and model training in Python repo
 
 ---
 
 ## 🚀 Next Step
 
-**Phase 7F — GCP Streaming Pipeline** (waiting on Python Phase 4 — Pub/Sub + Dataflow). Python Phase 3 is complete: Cloud Run API is live at `https://bike-demand-api-246440913351.us-central1.run.app`. For cloud deployment, set `FASTAPI_URL=https://bike-demand-api-246440913351.us-central1.run.app`; docker-compose.yml retains `http://fastapi:8000` for local development.
+**This repo is waiting on Python repo Priority 2 (Phase 4 — Pub/Sub + Dataflow, v3.0.0).** Once Phase 4 is deployed, Phase 7F (Priority 3, v1.2.0) becomes the next active task here — integrating the Dataflow → BigQuery output into the Shiny dashboard.
+
+**Python repo is currently working Priority 1 (Phase 6 — Observability, v2.1.0)**, which is independent and will complete before Phase 4 begins.
 
 Resume with: `"resume bike demand prediction project"`

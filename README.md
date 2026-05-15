@@ -546,10 +546,11 @@ The capstone presentation covers the full pipeline from data collection through 
 - [x] "Best time to ride today" recommendation
 - [x] Natural-language summary: available bikes at nearest station
 
-#### Phase 7F — GCP Streaming Pipeline 🔲
+#### Phase 7F — GCP Streaming Dashboard ← **Priority 3 (v1.2.0 — after Python Phase 4)** 🔲
 - [ ] `pipeline/gbfs_to_pubsub.py` — GBFS poller → Pub/Sub (`USE_PUBSUB=false` runs locally)
 - [ ] `pipeline/dataflow_job.py` — Apache Beam: Pub/Sub → BigQuery windowed aggregation
 - [ ] Local mode: DirectRunner + DuckDB (no GCP account required)
+- Pipeline code lives in `bike-demand-ml-system`; this repo integrates the BigQuery output into the Shiny dashboard
 
 #### Phase 7G — Documentation ✅
 - [x] README architecture diagram updated with full v1.1 stack
@@ -559,12 +560,13 @@ The capstone presentation covers the full pipeline from data collection through 
 - [x] `Dockerfile.shiny` — rocker/shiny:4.4.3 base, renv restore via PPM, EXPOSE 3838
 - [x] CI extended with Docker Compose smoke test (`docker-compose-build` job)
 
-### 🔮 Backlog
+### 🔮 Backlog — Priority Ordered
 
-- [ ] pytest / testthat unit tests for ETL and model evaluation functions
-- [ ] Seoul GBFS integration (free API key at data.seoul.go.kr)
 - [x] Washington DC added — Capital Bikeshare GBFS v2, RF model RMSE 97.47 bikes/hr
-- [ ] Expand further — San Francisco (Ford GoBike) or Amsterdam (OV-fiets)
+- [ ] **Priority 5** — Train Paris + Chicago RF models (source Vélib' / Divvy data) to replace Seoul proxy (v1.3.0)
+- [ ] **Priority 6** — pytest / testthat unit tests for ETL and model evaluation functions
+- [ ] **Priority 7** — Seoul GBFS integration (free API key at data.seoul.go.kr)
+- [ ] **Priority 8** — Expand to 8 cities — San Francisco (Ford GoBike) or Amsterdam (OV-fiets)
 
 ---
 
