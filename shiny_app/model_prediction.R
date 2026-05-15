@@ -363,7 +363,7 @@ predict_bike_demand_fastapi <- function(FORECASTDATETIME, TEMPERATURE, HUMIDITY,
                                         city = "seoul") {           # city name routed to per-city RF artifact
 
   # ── Config ────────────────────────────────────────────────────────────────
-  fastapi_url <- Sys.getenv("FASTAPI_URL", unset = "http://localhost:8000")  # service endpoint; overridden by Docker Compose
+  fastapi_url <- Sys.getenv("FASTAPI_URL", unset = "http://localhost:8000")  # service endpoint; overridden by Docker Compose or Cloud Run (https://bike-demand-api-246440913351.us-central1.run.app)
   predict_url <- paste0(fastapi_url, "/predict")                              # full POST path
 
   # ── Season case conversion ─────────────────────────────────────────────────
