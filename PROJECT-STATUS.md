@@ -12,7 +12,7 @@ Both repos form a single portfolio system. Track them together here.
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
 | **bike_demand_prediction** (this repo) | R Shiny dashboard | Phase 7H complete — 6 cities; v1.0.0 released | ✅ Done | `e45ced8` |
-| **bike-demand-ml-system** | Python FastAPI + ML training | Phase 3 DONE — Cloud Run live at https://bike-demand-api-246440913351.us-central1.run.app | ✅ Done | `5ea4a09` |
+| **bike-demand-ml-system** | Python FastAPI + ML training | Phase 6 DONE — Cloud Run live; structured logging + /metrics shipped (v2.1.0) | ✅ Done | `c6fd1d0` |
 
 ### Trained City Models (Python repo)
 
@@ -29,14 +29,14 @@ Both repos form a single portfolio system. Track them together here.
 
 | Priority | Repo | Phase | Target Version | Dependency |
 |----------|------|-------|---------------|------------|
-| **1** | bike-demand-ml-system | Phase 6 — Observability | v2.1.0 | None — start now |
-| **2** | bike-demand-ml-system | Phase 4 — Pub/Sub + Dataflow | v3.0.0 | None — unblocked |
-| **3** | bike_demand_prediction | Phase 7F — GCP Streaming Dashboard | v1.2.0 | Waits on Python Phase 4 |
-| **4** | bike-demand-ml-system | Phase 5 — Vertex AI + MLflow | v4.0.0 | Best after streaming data exists |
-| **5** | bike_demand_prediction | Backlog — Paris/Chicago models | v1.3.0 | Data sourcing required |
-| **6** | Both | Backlog — testthat / pytest | — | None |
-| **7** | bike_demand_prediction | Backlog — Seoul GBFS | — | External API key |
-| **8** | bike_demand_prediction | Backlog — City expansion (SF/Amsterdam) | — | Data sourcing required |
+| ~~1~~ | bike-demand-ml-system | ~~Phase 6 — Observability~~ | ~~v2.1.0~~ | **✅ Shipped** |
+| **1** | bike-demand-ml-system | Phase 4 — Pub/Sub + Dataflow | v3.0.0 | None — unblocked |
+| **2** | bike_demand_prediction | Phase 7F — GCP Streaming Dashboard | v1.2.0 | Waits on Python Phase 4 |
+| **3** | bike-demand-ml-system | Phase 5 — Vertex AI + MLflow | v4.0.0 | Best after streaming data exists |
+| **4** | bike_demand_prediction | Backlog — Paris/Chicago models | v1.3.0 | Data sourcing required |
+| **5** | Both | Backlog — testthat / pytest | — | None |
+| **6** | bike_demand_prediction | Backlog — Seoul GBFS | — | External API key |
+| **7** | bike_demand_prediction | Backlog — City expansion (SF/Amsterdam) | — | Data sourcing required |
 
 ---
 
@@ -139,8 +139,8 @@ Both repos form a single portfolio system. Track them together here.
 
 ## 🚀 Next Step
 
-**This repo is waiting on Python repo Priority 2 (Phase 4 — Pub/Sub + Dataflow, v3.0.0).** Once Phase 4 is deployed, Phase 7F (Priority 3, v1.2.0) becomes the next active task here — integrating the Dataflow → BigQuery output into the Shiny dashboard.
+**This repo is waiting on Python repo Priority 1 (Phase 4 — Pub/Sub + Dataflow, v3.0.0).** Once Phase 4 is deployed, Phase 7F (Priority 2, v1.2.0) becomes the next active task here — integrating the Dataflow → BigQuery output into the Shiny dashboard.
 
-**Python repo is currently working Priority 1 (Phase 6 — Observability, v2.1.0)**, which is independent and will complete before Phase 4 begins.
+*Python repo Phase 6 (Observability) is complete — v2.1.0 shipped on 2026-05-15.*
 
 Resume with: `"resume bike demand prediction project"`
