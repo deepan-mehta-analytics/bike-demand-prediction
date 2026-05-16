@@ -15,6 +15,12 @@ if (!require(scales))    install.packages("scales")
 
 source("model_prediction.R")    # weather API + linear regression model
 source("gbfs_client.R")         # live GBFS station availability client (Phase 7B)
+source("bigquery_client.R")     # BigQuery auth + trend/snapshot queries (Phase 7F)
+
+# ── Phase 7F: authenticate once on server start ───────────────────────────────
+# BQ_AVAILABLE is TRUE if GOOGLE_APPLICATION_CREDENTIALS is set and valid.
+# All GCP Stream tab outputs gate on this flag before querying BigQuery.
+BQ_AVAILABLE <- bq_auth_safe()  # FALSE if not configured — GCP Stream tab shows setup instructions
 
 test_weather_data_generation <- function() {
   city_weather_bike_df <- generate_city_weather_bike_data()
@@ -1035,6 +1041,226 @@ shinyServer(function(input, output, session) {
           AVAILABLE_DOCKS, " docks free | Capacity: ", CAPACITY, "</span>"
         )
       )
+  })
+
+
+  # ===========================================================================
+  # GCP STREAM TAB (Phase 7F)
+  # Live station availability from BigQuery (written by Dataflow pipeline).
+  # Queries bike-demand-ml-system.bike_demand.station_snapshots every 5 minutes.
+  # ===========================================================================
+
+  # ── 5-minute auto-refresh timer ──────────────────────────────────────────────
+  bq_timer <- reactiveTimer(300000)                        # fire every 300 000 ms (5 minutes)
+
+  # ── Manual refresh trigger ────────────────────────────────────────────────────
+  bq_refresh_counter <- reactiveVal(0L)                    # incremented by the Refresh Now button
+  observeEvent(input$bq_refresh, {
+    bq_refresh_counter(bq_refresh_counter() + 1L)         # bumping the counter invalidates bq_trend/bq_latest
+  })
+
+  # ── Last successful refresh timestamp ────────────────────────────────────────
+  bq_last_refresh <- reactiveVal(NULL)                     # set to Sys.time() each time a query returns rows
+
+  # ── BQ trend data reactive ────────────────────────────────────────────────────
+  # Re-executes on: 5-min timer, manual refresh, or city dropdown change.
+  bq_trend <- reactive({
+    bq_timer()                                             # auto-refresh dependency
+    bq_refresh_counter()                                   # manual refresh dependency
+    if (!BQ_AVAILABLE) return(NULL)                        # skip query when not authenticated
+    df <- query_city_trend(input$bq_city, hours_back = 2) # last 2 hours for the selected city
+    if (!is.null(df)) bq_last_refresh(Sys.time())         # record refresh time when data arrives
+    df
+  })
+
+  # ── BQ latest snapshot reactive ───────────────────────────────────────────────
+  # Returns one row per city: most recent window in the last 24 hours.
+  bq_latest <- reactive({
+    bq_timer()                                             # auto-refresh dependency
+    bq_refresh_counter()                                   # manual refresh dependency
+    if (!BQ_AVAILABLE) return(NULL)
+    query_latest_snapshot()
+  })
+
+  # ── Connection status panel ────────────────────────────────────────────────────
+  output$bq_status_panel <- renderUI({
+    if (!BQ_AVAILABLE) {                                   # auth failed or bigrquery not installed
+      return(tags$div(
+        class = "panel panel-warning", style = "margin-bottom:0;",
+        tags$div(class = "panel-heading",
+          tags$h3(class = "panel-title",
+            tags$i(class = "glyphicon glyphicon-warning-sign", style = "margin-right:6px;"),
+            "GCP Not Configured"
+          )
+        ),
+        tags$div(class = "panel-body",
+          tags$p(style = "margin:0 0 8px; font-size:12px;",
+            "To enable live BigQuery data:"
+          ),
+          tags$ol(style = "font-size:12px; padding-left:18px; margin:0;",
+            tags$li(tags$code("renv::install('bigrquery')"), " then ",
+                    tags$code("renv::snapshot()")),       # Step 1: install the package
+            tags$li("Export a service account key for GCP project ",
+                    tags$code("bike-demand-ml-system")),  # Step 2: create credentials
+            tags$li("Set env var ",
+                    tags$code("GOOGLE_APPLICATION_CREDENTIALS"),
+                    " to the JSON file path")             # Step 3: configure the env var
+          )
+        )
+      ))
+    }
+    latest      <- bq_latest()                            # current latest-snapshot data
+    n_cities    <- if (is.null(latest)) 0L else nrow(latest)  # count cities with recent data
+    last_ref    <- bq_last_refresh()                      # time of most recent successful query
+
+    tags$div(
+      class = "panel panel-success", style = "margin-bottom:0;",
+      tags$div(class = "panel-heading",
+        tags$h3(class = "panel-title",
+          tags$i(class = "glyphicon glyphicon-ok-circle", style = "margin-right:6px;"),
+          "BigQuery Connected"
+        )
+      ),
+      tags$div(class = "panel-body",
+        tags$p(style = "margin:0; font-size:12px;",
+          tags$strong(n_cities), " cities with recent data  •  5-min windows"
+        ),
+        if (!is.null(last_ref))                           # show refresh time once a query has run
+          tags$p(style = "font-size:11px; color:#888; margin:4px 0 0;",
+            "Last refresh: ", format(last_ref, "%H:%M:%S UTC")
+          )
+      )
+    )
+  })
+
+  # ── Latest snapshot stat cards ─────────────────────────────────────────────────
+  output$bq_city_stats <- renderUI({
+    latest <- bq_latest()
+
+    if (is.null(latest)) {                                 # no data in last 24 hours
+      if (!BQ_AVAILABLE) return(NULL)                      # hide — the status panel already explains why
+      return(tags$div(class = "dash-card",
+        tags$h5("Pipeline Status"),
+        tags$p(style = "font-size:12px; color:#888; margin:0;",
+          tags$i(class = "glyphicon glyphicon-time",
+                 style = "margin-right:5px; color:#e99002;"),
+          "No data in last 24 hours. Is the pipeline running?"
+        )
+      ))
+    }
+
+    rows <- lapply(seq_len(nrow(latest)), function(i) {   # one display row per city with data
+      r       <- latest[i, ]
+      age_min <- as.numeric(difftime(Sys.time(), r$latest_window, units = "mins"))  # minutes old
+      age_txt <- if (age_min < 60)                         # format age as "Xm ago" or "X.Xh ago"
+        paste0(round(age_min), "m ago")
+      else
+        paste0(round(age_min / 60, 1), "h ago")
+
+      tags$div(
+        style = paste0(
+          "display:flex; justify-content:space-between; align-items:center;",
+          "padding:6px 0; border-bottom:1px solid #f0f4f8; font-size:12px;"
+        ),
+        tags$span(style = "font-weight:600; color:#004e7c;", r$city_name),  # city name (left)
+        tags$span(                                          # avg bikes + age (right)
+          tags$strong(scales::comma(r$avg_bikes)), " avg  ",
+          tags$span(style = "color:#888;", age_txt)
+        )
+      )
+    })
+
+    tags$div(class = "dash-card",
+      tags$h5("Latest Snapshot — All Cities"),
+      rows
+    )
+  })
+
+  # ── BQ trend time-series chart builder ────────────────────────────────────────
+  # One ggplot per call: avg line + min/max ribbon + per-window point labels.
+  build_bq_trend_chart <- function(df, city_name) {
+    ggplot(df, aes(x = window_start)) +
+      geom_ribbon(                                         # shaded band = min/max bike range across stations
+        aes(ymin = min_bikes, ymax = max_bikes),
+        fill  = "#e8f4fb",
+        alpha = 0.55
+      ) +
+      geom_line(                                           # solid line = avg bikes per station per window
+        aes(y = avg_bikes),
+        color     = "#008cba",
+        linewidth = 1.1
+      ) +
+      geom_point(                                          # dot per window for visual inspection
+        aes(y = avg_bikes),
+        color = "#004e7c",
+        size  = 2.5
+      ) +
+      geom_text(                                           # numeric labels above each point
+        aes(y = avg_bikes, label = round(avg_bikes, 0)),
+        vjust = -0.8,
+        size  = 3,
+        color = "#333"
+      ) +
+      labs(
+        title    = paste("Live Station Feed —", city_name),
+        subtitle = paste0(
+          "5-minute windows  •  avg bikes / station (ribbon = min/max)  •  ",
+          nrow(df), " windows"
+        ),
+        x = "Window Start (UTC)",
+        y = "Bikes Available (avg per station)"
+      ) +
+      scale_x_datetime(date_labels = "%H:%M", date_breaks = "15 min") +
+      theme_minimal() +
+      theme(
+        plot.title       = element_text(face = "bold", size = 12, color = "#004e7c"),
+        plot.subtitle    = element_text(size = 9, color = "#666"),
+        axis.title       = element_text(size = 9),
+        axis.text.x      = element_text(angle = 30, hjust = 1, size = 8),
+        panel.grid.minor = element_blank()
+      )
+  }
+
+  # ── GCP Stream chart output ────────────────────────────────────────────────────
+  output$bq_stream_chart <- renderPlot({
+    df <- bq_trend()                                       # current BQ trend data for selected city
+
+    if (!BQ_AVAILABLE) return(NULL)                        # empty plot when not configured
+
+    if (is.null(df) || nrow(df) == 0) {                   # no data for city in last 2 hours
+      ggplot() +
+        annotate(                                          # centre-aligned message on blank canvas
+          "text",
+          x     = 0.5, y = 0.5,
+          label = paste0(
+            input$bq_city, " has no data in the last 2 hours.\n",
+            "The GBFS poller may not currently be publishing this city."
+          ),
+          size  = 4.5, color = "#888",
+          hjust = 0.5,  vjust = 0.5
+        ) +
+        xlim(0, 1) + ylim(0, 1) +
+        theme_void() +
+        labs(
+          title    = paste("Live Station Feed —", input$bq_city),
+          subtitle = "No data in last 2 hours"
+        ) +
+        theme(
+          plot.title    = element_text(face = "bold", size = 12, color = "#004e7c"),
+          plot.subtitle = element_text(size = 9, color = "#888")
+        )
+    } else {
+      build_bq_trend_chart(df, input$bq_city)             # full trend chart when data is present
+    }
+  })
+
+  # ── Last refresh text (shown below Refresh Now button) ────────────────────────
+  output$bq_refresh_text <- renderUI({
+    if (!BQ_AVAILABLE) return(NULL)
+    tags$p(
+      style = "font-size:10px; color:#999; margin:4px 0 0; font-style:italic;",
+      "Auto-refreshes every 5 minutes."
+    )
   })
 
 })  # end shinyServer

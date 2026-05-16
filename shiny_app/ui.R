@@ -246,6 +246,31 @@ shinyUI(
         .demand-card .demand-badge { font-size: 13px !important; padding: 5px 9px !important; display: inline-block; border-radius: 3px; }
         .demand-card .demand-bikes { font-size: 11px; color: #666; margin: 7px 0 0; }
 
+        /* ── GCP Stream tab: chart panel container ── */
+        /* Mirrors dash-map but holds a plotOutput instead of a leafletOutput */
+        .dash-chart-panel {
+          flex: 1;
+          background: #ffffff;
+          border-radius: 10px;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+        .chart-panel-header {
+          background: linear-gradient(135deg, #004e7c 0%, #008cba 100%);
+          color: #fff;
+          padding: 12px 18px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-shrink: 0;
+        }
+        .chart-panel-body {
+          flex: 1;
+          padding: 16px;
+        }
+
       ")))
     ),
     
@@ -637,7 +662,121 @@ shinyUI(
                )
 
       )  # end dashboard-wrapper (Rider)
-    )    # end Rider tabPanel
+    ),   # end Rider tabPanel
+
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # GCP STREAM TAB (Phase 7F)
+    # Live station availability from BigQuery (written by Dataflow pipeline):
+    #   — Queries bike-demand-ml-system.bike_demand.station_snapshots
+    #   — Time-series chart: avg bikes / station per 5-min window (last 2 hrs)
+    #   — Shaded ribbon: min-to-max range across stations in each window
+    #   — Auto-refreshes every 5 minutes; manual Refresh Now button
+    #   — Shows setup instructions when GOOGLE_APPLICATION_CREDENTIALS not set
+    # ══════════════════════════════════════════════════════════════════════════
+    tabPanel(
+      title = tags$span(
+        tags$i(class = "glyphicon glyphicon-signal", style = "margin-right:5px;"),
+        "GCP Stream"
+      ),
+
+      tags$div(class = "dashboard-wrapper",
+
+               # ════════════════════════════════════════════════════════════════
+               # LEFT SIDEBAR — city selector, status, refresh, stats
+               # ════════════════════════════════════════════════════════════════
+               tags$div(class = "dash-left", style = "width:310px; min-width:310px;",
+
+                        # City selector — only cities the Dataflow pipeline publishes
+                        tags$div(class = "dash-card",
+                                 tags$h5("Select City"),
+                                 selectInput(
+                                   inputId  = "bq_city",
+                                   label    = NULL,
+                                   choices  = c("New York", "Washington DC", "London", "Chicago"),
+                                   selected = "New York"   # NYC has live data from 2026-05-15
+                                 ),
+                                 tags$p(
+                                   style = "font-size:11px; color:#888; margin:4px 0 0;",
+                                   tags$i(class="glyphicon glyphicon-info-sign",
+                                          style="margin-right:3px; color:#008cba;"),
+                                   "Only cities polled by the Dataflow pipeline are available here.",
+                                   " Seoul and Paris are not in the GCP pipeline."
+                                 )
+                        ),
+
+                        # Connection status — green (connected) or amber (setup needed)
+                        # Rendered server-side so it reflects BQ_AVAILABLE at runtime
+                        uiOutput("bq_status_panel"),
+
+                        # Refresh Now button + auto-refresh hint
+                        tags$div(class = "dash-card",
+                                 tags$h5("Refresh Data"),
+                                 actionButton(
+                                   inputId = "bq_refresh",
+                                   label   = tags$span(
+                                     tags$i(class = "glyphicon glyphicon-refresh",
+                                            style = "margin-right:6px;"),
+                                     "Refresh Now"
+                                   ),
+                                   class = "btn btn-primary btn-block"
+                                 ),
+                                 uiOutput("bq_refresh_text")  # "Auto-refreshes every 5 minutes."
+                        ),
+
+                        # Per-city latest snapshot stats (one row per city with recent data)
+                        uiOutput("bq_city_stats"),
+
+                        # How-this-works explanation card
+                        tags$div(class = "dash-card",
+                                 tags$h5("About This Tab"),
+                                 tags$div(class = "tip-row",
+                                          tags$div(class = "tip-icon", "1"),
+                                          tags$span(
+                                            "Data flows: GBFS → Pub/Sub → Dataflow → BigQuery",
+                                            " every 5 minutes."
+                                          )
+                                 ),
+                                 tags$div(class = "tip-row",
+                                          tags$div(class = "tip-icon", "2"),
+                                          tags$span(
+                                            "Each chart point = average bikes available per station",
+                                            " within a 5-minute aggregation window."
+                                          )
+                                 ),
+                                 tags$div(class = "tip-row",
+                                          tags$div(class = "tip-icon", "3"),
+                                          tags$span(
+                                            "The blue ribbon shows the min-to-max bike range across",
+                                            " all stations in each window."
+                                          )
+                                 )
+                        )
+
+               ),  # end dash-left (GCP Stream)
+
+
+               # ════════════════════════════════════════════════════════════════
+               # CENTRE — time-series chart from BigQuery
+               # Avg bikes per station per 5-min window, last 2 hours
+               # ════════════════════════════════════════════════════════════════
+               tags$div(class = "dash-chart-panel",
+                        tags$div(class = "chart-panel-header",
+                                 tags$div(class = "map-title",
+                                          tags$i(class = "glyphicon glyphicon-signal",
+                                                 style = "margin-right:7px;"),
+                                          "GCP Streaming Dashboard — Last 2 Hours"
+                                 ),
+                                 tags$div(class = "map-badge", "BigQuery • Live")
+                        ),
+                        tags$div(class = "chart-panel-body",
+                                 plotOutput("bq_stream_chart",
+                                            height = "calc(100vh - 200px)")
+                        )
+               )
+
+      )  # end dashboard-wrapper (GCP Stream)
+    )    # end GCP Stream tabPanel
 
   )      # end navbarPage
 )        # end shinyUI
