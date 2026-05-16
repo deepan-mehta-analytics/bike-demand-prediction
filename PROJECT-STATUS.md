@@ -12,7 +12,7 @@ Both repos form a single portfolio system. Track them together here.
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
 | **bike_demand_prediction** (this repo) | R Shiny dashboard | Phase 7F complete — GCP Stream tab live (v1.2.0); end-to-end verified | ✅ Done | `6dbe149` |
-| **bike-demand-ml-system** | Python FastAPI + ML training | Phase 5 design approved — Vertex AI + MLflow spec written (v4.0.0 in design) | 🔄 In Design | `0d25652` |
+| **bike-demand-ml-system** | Python FastAPI + ML training | Phase 5 code shipped — GCP provisioning + verification next (v4.0.0 in progress) | 🔄 In Progress | `fa2bc05` |
 
 ### Trained City Models (Python repo)
 
