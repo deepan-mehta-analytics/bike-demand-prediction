@@ -601,9 +601,9 @@ Sathishkumar V.E., Park J., Cho Y. (2020). *Using data mining techniques for bik
 
 **Deepan Mehta**
 
-Data Analytics → Data Engineering → AI/ML Engineering
-
-Focused on building end-to-end data systems combining analytics, machine learning, and deployment. Experience in ETL pipelines, predictive modelling, and interactive dashboards.
+- Data Analytics → Data Engineering → AI/ML Engineering
+- Focused on building end-to-end data and ML systems combining analytics, automation, and deployment
+- Experience in ETL pipelines, predictive modelling, and interactive dashboards
 
 🔗 GitHub: [deepan-mehta-analytics](https://github.com/deepan-mehta-analytics)
 
