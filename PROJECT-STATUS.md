@@ -12,7 +12,7 @@ Both repos form a single portfolio system. Track them together here.
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
 | **bike_demand_prediction** (this repo) | R Shiny dashboard | Phase 7F complete — GCP Stream tab live (v1.2.0); end-to-end verified | ✅ Done | `6dbe149` |
-| **bike-demand-ml-system** | Python FastAPI + ML training | Phase 5 GCP provisioned — verification + v4.0.0 release next | 🔄 In Progress | `5f1dd01` |
+| **bike-demand-ml-system** | Python FastAPI + ML training | Phase 5 (Vertex AI + MLflow) DONE — v4.0.0 released | ✅ Done | `e9a1872` |
 
 ### Trained City Models (Python repo)
 
@@ -32,7 +32,7 @@ Both repos form a single portfolio system. Track them together here.
 | ~~1~~ | bike-demand-ml-system | ~~Phase 6 — Observability~~ | ~~v2.1.0~~ | **✅ Shipped** |
 | ~~1~~ | bike-demand-ml-system | ~~Phase 4 — Pub/Sub + Dataflow~~ | ~~v3.0.0~~ | **✅ Shipped** |
 | ~~1~~ | bike_demand_prediction | ~~Phase 7F — GCP Streaming Dashboard~~ | ~~v1.2.0~~ | **✅ Shipped** |
-| **2** | bike-demand-ml-system | Phase 5 — Vertex AI + MLflow | v4.0.0 | Best after streaming data exists |
+| ~~2~~ | bike-demand-ml-system | ~~Phase 5 — Vertex AI + MLflow~~ | ~~v4.0.0~~ | **✅ Shipped (2026-05-17)** |
 | **4** | bike_demand_prediction | Backlog — Paris/Chicago models | v1.3.0 | Data sourcing required |
 | **5** | Both | Backlog — testthat / pytest | — | None |
 | **6** | bike_demand_prediction | Backlog — Seoul GBFS | — | External API key |
