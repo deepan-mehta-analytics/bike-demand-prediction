@@ -11,7 +11,7 @@ Both repos form a single portfolio system. Track them together here.
 
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
-| **bike_demand_prediction** (this repo) | R Shiny dashboard | Phase 7H complete — 6 cities; v1.1.0 released; Phase 7F next | ✅ Done | `e799f44` |
+| **bike_demand_prediction** (this repo) | R Shiny dashboard | Phase 7F complete — GCP Stream tab live (v1.2.0) | ✅ Done | `1764b19` |
 | **bike-demand-ml-system** | Python FastAPI + ML training | Phase 4 complete — GBFS→Pub/Sub→Dataflow→BigQuery end-to-end verified (v3.0.0) | ✅ Done | `e6189e3` |
 
 ### Trained City Models (Python repo)
@@ -31,7 +31,7 @@ Both repos form a single portfolio system. Track them together here.
 |----------|------|-------|---------------|------------|
 | ~~1~~ | bike-demand-ml-system | ~~Phase 6 — Observability~~ | ~~v2.1.0~~ | **✅ Shipped** |
 | ~~1~~ | bike-demand-ml-system | ~~Phase 4 — Pub/Sub + Dataflow~~ | ~~v3.0.0~~ | **✅ Shipped** |
-| **1** | bike_demand_prediction | Phase 7F — GCP Streaming Dashboard | v1.2.0 | ✅ Unblocked — BigQuery table `bike_demand.station_snapshots` live |
+| ~~1~~ | bike_demand_prediction | ~~Phase 7F — GCP Streaming Dashboard~~ | ~~v1.2.0~~ | **✅ Shipped** |
 | **2** | bike-demand-ml-system | Phase 5 — Vertex AI + MLflow | v4.0.0 | Best after streaming data exists |
 | **4** | bike_demand_prediction | Backlog — Paris/Chicago models | v1.3.0 | Data sourcing required |
 | **5** | Both | Backlog — testthat / pytest | — | None |
@@ -97,6 +97,13 @@ Both repos form a single portfolio system. Track them together here.
 * `docker-compose.yml` — Shiny + FastAPI co-located (requires sibling Python repo)
 * CI: `docker-compose-build` job + apt/Docker layer caching for fast runs
 
+### v1.2.0 — Released 2026-05-16 (Phase 7F — GCP Streaming Dashboard)
+* `shiny_app/bigquery_client.R` — BQ auth (service account via `GOOGLE_APPLICATION_CREDENTIALS`), `query_city_trend()` (2h rolling avg/min/max windowed by 5-min buckets), `query_latest_snapshot()` (newest window per city via ROW_NUMBER)
+* `shiny_app/server.R` — BQ_AVAILABLE flag on startup; `reactiveTimer(300000)` for 5-min auto-refresh; manual refresh button; `bq_status_panel`, `bq_city_stats`, `bq_stream_chart` (ggplot2 ribbon + avg line)
+* `shiny_app/ui.R` — 4th "GCP Stream" tab (glyphicon-signal) with city selector, status panel, status cards, and centre chart
+* `renv.lock` — bigrquery 1.6.2 + 22 dependency packages added via `renv::record()` (182 total)
+* Graceful degradation — GCP Stream tab shows 3-step setup instructions when `GOOGLE_APPLICATION_CREDENTIALS` is not set; never crashes the app
+
 ---
 
 ## ⚠️ Known Limitations
@@ -105,17 +112,17 @@ Both repos form a single portfolio system. Track them together here.
 * No unit/integration tests (pytest / testthat) for ETL or model evaluation functions
 * Seoul GBFS not integrated (requires free API key at data.seoul.go.kr)
 * `USE_FASTAPI` is env-var controlled — no in-app toggle (by design for Docker simplicity)
-* Phase 7F (GCP Streaming Dashboard) is next — BigQuery `bike_demand.station_snapshots` is live; no remaining blockers
+* GCP Stream tab requires `GOOGLE_APPLICATION_CREDENTIALS` env var pointing to a GCP service account JSON — not configured by default; tab shows setup instructions when not set
 
 ---
 
 ## 🔜 Roadmap
 
-### Phase 7F — GCP Streaming Dashboard ← Priority 1 (v1.2.0 — UNBLOCKED)
-* **Python pipeline is live** — `bike_demand.station_snapshots` table populated with real GBFS data (nyc: 6,624 rows, 5-min windowed aggregations)
-* This repo's work: query BigQuery `station_snapshots` from Shiny app; display live station-level aggregations on the dashboard
-* `config/gcp_config.yaml` already created (connection settings only); no pipeline code needed here — pipeline lives in Python repo
-* Requires: `bigrquery` R package + GCP service account credentials for BigQuery read access from Shiny
+### Phase 7F — GCP Streaming Dashboard ✅ DONE (v1.2.0 — 2026-05-16)
+* `shiny_app/bigquery_client.R` — `bq_auth_safe()`, `query_city_trend()`, `query_latest_snapshot()`
+* 4th "GCP Stream" tab in Shiny — live 5-min windowed avg/min/max bikes per city, auto-refresh every 5 min
+* bigrquery 1.6.2 + 22 deps added to `renv.lock` via `renv::record()`
+* Commits `9b1fd47` (code) + `1764b19` (renv.lock) pushed to origin/main
 
 ### Backlog — Priority 5: Paris/Chicago models (v1.3.0)
 * Train Paris RF model — source Vélib' Métropole open data (Paris OpenData portal)
@@ -138,8 +145,10 @@ Both repos form a single portfolio system. Track them together here.
 
 ## 🚀 Next Step
 
-**Phase 7F — GCP Streaming Dashboard is the active next task (Priority 1, v1.2.0).** Python Phase 4 complete (v3.0.0 — 2026-05-15). BigQuery table `bike_demand.station_snapshots` is live with real GBFS data. This repo's work: add `bigrquery` R package, query the station_snapshots table from Shiny, and display live 5-minute windowed bike availability on the dashboard.
+**v1.2.0 shipped (2026-05-16) — Phase 7F complete.** The GCP Stream tab is live: bigrquery queries `bike_demand.station_snapshots` from Shiny, displaying live 5-minute windowed avg/min/max bike availability for NYC, DC, London, and Chicago.
 
-*Python repo v3.0.0 shipped 2026-05-15 — latest commit `e6189e3`.*
+**Next priority (v1.3.0):** Train Paris and Chicago RF models to replace the Seoul fallback proxy. Source Vélib' open data (Paris OpenData portal) and Divvy trip data (Chicago Data Portal).
+
+*Latest commit `1764b19` — renv.lock updated with bigrquery 1.6.2 + 22 deps (2026-05-16).*
 
 Resume with: `"resume bike demand prediction project"`

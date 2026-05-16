@@ -8,7 +8,7 @@ This project delivers a full-stack predictive analytics system for bike-sharing 
 
 The R pipeline benchmarks six model classes on a chronological 80/20 held-out split, achieving a Random Forest with R²=0.730 (RMSE 333.89 bikes/hr) — a 39% improvement over the baseline linear model. The Bikecast Shiny dashboard provides live 24-hour demand forecasts for six global cities rendered on an interactive Leaflet map, with city drill-down showing live GBFS station availability markers, demand-band filtering, and expand-to-modal charts.
 
-**v1.1 is shipped.** Phase 7 extended the dashboard into two real end-user tools: an **Operator tab** (fleet rebalancing alerts, demand vs. station capacity) and a **Rider tab** (live availability score, best-time recommendation, natural-language summary). The prediction backend is upgraded to a Python FastAPI inference service (RF RMSE 173 bikes/hr) replacing the linear model.csv; Docker Compose runs the full stack locally. The Python API is **live on GCP Cloud Run** (`https://bike-demand-api-246440913351.us-central1.run.app`). Next: **v1.2 — GCP Streaming Dashboard** (Phase 7F) — the Python streaming pipeline is live (v3.0.0); `bike_demand.station_snapshots` in BigQuery is populated with real GBFS data. This repo's work is integrating that table into the Shiny dashboard via `bigrquery`.
+**v1.2 is shipped.** Phase 7 extended the dashboard into two real end-user tools: an **Operator tab** (fleet rebalancing alerts, demand vs. station capacity) and a **Rider tab** (live availability score, best-time recommendation, natural-language summary). The prediction backend is a Python FastAPI inference service (RF RMSE 173 bikes/hr) live on **GCP Cloud Run**; Docker Compose runs the full stack locally. **v1.2 adds a GCP Stream tab** — `bigrquery` queries `bike_demand.station_snapshots` in BigQuery directly from the Shiny app, displaying live 5-minute windowed avg/min/max bike availability for NYC, DC, London, and Chicago fed by the Apache Beam / Dataflow streaming pipeline (Python repo v3.0.0).
 
 ### End-to-end ML pipeline: raw Seoul data → six competing models → live global demand forecast
 
@@ -22,7 +22,8 @@ The R pipeline benchmarks six model classes on a chronological 80/20 held-out sp
 ![Shiny](https://img.shields.io/badge/Shiny-1F77B4?style=for-the-badge)
 ![Machine Learning](https://img.shields.io/badge/Machine%20Learning-Regression-orange?style=for-the-badge)
 ![Status](https://img.shields.io/badge/v1.1-Released-success?style=for-the-badge)
-![Status](https://img.shields.io/badge/v1.2-In%20Development-blue?style=for-the-badge)
+![Status](https://img.shields.io/badge/v1.2-Released-success?style=for-the-badge)
+![Status](https://img.shields.io/badge/v1.3-In%20Development-blue?style=for-the-badge)
 ![API](https://img.shields.io/badge/API-OpenWeather-blue?style=for-the-badge)
 ![IBM](https://img.shields.io/badge/IBM-Data%20Analytics%20Capstone-054ADA?style=for-the-badge&logo=ibm&logoColor=white)
 
@@ -51,7 +52,7 @@ The R pipeline benchmarks six model classes on a chronological 80/20 held-out sp
 | Live station data | GBFS v2 (NYC / Paris / Chicago) · TfL BikePoint API (London) | Real-time available bikes per station |
 | Dashboard | R Shiny, shinythemes (Yeti), shinyjs | Live Bikecast 24-hr demand web app |
 | ML inference service *(v1.1)* | Python FastAPI + scikit-learn RF | `/predict` endpoint; RMSE 173 bikes/hr |
-| Streaming pipeline *(v1.1)* | GCP Pub/Sub · Apache Beam / Dataflow · BigQuery | GBFS → real-time station event stream → analytics store |
+| Streaming pipeline *(v1.2)* | GCP Pub/Sub · Apache Beam / Dataflow · BigQuery · bigrquery | GBFS → 5-min windowed station aggregations → Shiny GCP Stream tab |
 | Containerisation *(v1.1)* | Docker · Docker Compose · GCP Cloud Run | Reproducible local + cloud deployment |
 | Development | RStudio, JupyterLab | Notebook authoring and Shiny development |
 
@@ -104,12 +105,12 @@ The Seoul Bike Sharing dataset provides 8,760 hourly observations (Jan 2017 – 
 └──────────────────────────┬───────────────────────────────────────┘
                            │
 ┌──────────────────────────▼───────────────────────────────────────┐
-│          REAL USE-CASE LAYER  (v1.1 shipped / v1.2 in development)│
+│          REAL USE-CASE LAYER  (v1.2 shipped)                     │
 │                                                                  │
 │  GBFS live feeds ──► Pub/Sub topic ──► Dataflow pipeline         │
 │                                              │                   │
 │                                              ▼                   │
-│  Python FastAPI /predict  ◄────── BigQuery station_events        │
+│  Python FastAPI /predict  ◄────── BigQuery station_snapshots     │
 │         │                                                        │
 │         ▼                                                        │
 │  Shiny UC1 Operator tab   — demand vs capacity, rebalancing      │
@@ -253,7 +254,8 @@ bike-demand-prediction/
 │   ├── ui.R
 │   ├── server.R
 │   ├── model_prediction.R
-│   └── gbfs_client.R                           # Live GBFS / TfL station data client (Phase 7B)
+│   ├── gbfs_client.R                           # Live GBFS / TfL station data client (Phase 7B)
+│   └── bigquery_client.R                       # BigQuery BQ auth + trend/snapshot query functions (Phase 7F)
 │
 ├── Dockerfile.shiny                            # Containerises R Shiny app (rocker/shiny:4.4.3 + renv)
 ├── docker-compose.yml                          # Orchestrates Shiny + FastAPI services locally
@@ -364,9 +366,12 @@ A professional three-column dashboard built on the **Yeti Bootswatch** theme.
 - **Rider tab (UC2)** — demand score (Low / Medium / High) for next 3 hours, best-time-to-ride recommendation, natural-language availability summary *(Phase 7E ✅)*
 - **Docker Compose deployment** — `docker compose up` runs the full Shiny + FastAPI stack locally *(Phase 7H ✅)*
 
-**In development (v1.2):**
-- **GCP Streaming Dashboard** — query live `bike_demand.station_snapshots` from Shiny via `bigrquery`; display 5-min windowed avg/min/max bikes per station *(Phase 7F — Python pipeline live as of 2026-05-15; BigQuery table populated)*
+**Features (v1.2 — shipped):**
+- **GCP Stream tab** — `bigrquery` queries `bike_demand.station_snapshots` in BigQuery; displays live 5-min windowed avg/min/max bike availability for NYC, DC, London, Chicago; auto-refreshes every 5 min *(Phase 7F ✅)*
+
+**In development (v1.3):**
 - **Seoul live stations** — GBFS integration pending Seoul Open API key registration
+- **Paris / Chicago RF models** — replace Seoul fallback proxy with city-specific models
 
 **Demand bands:**
 
@@ -519,6 +524,13 @@ The capstone presentation covers the full pipeline from data collection through 
 - [x] Add MIT LICENSE (2026, Deepan Mehta)
 - [x] Add GitHub Actions CI — Python + R smoke tests, `model.csv` integrity check
 
+### ✅ v1.2.0 — Released (2026-05-16)
+
+- [x] `shiny_app/bigquery_client.R` — BQ service-account auth, `query_city_trend()` (2h rolling window), `query_latest_snapshot()` (newest window per city)
+- [x] GCP Stream tab — `bigrquery` queries `bike_demand.station_snapshots`; ggplot2 ribbon (min/max band) + avg line; auto-refresh every 5 min
+- [x] `renv.lock` — bigrquery 1.6.2 + 22 deps added via `renv::record()` (182 packages total)
+- [x] Graceful degradation — tab shows 3-step setup instructions when `GOOGLE_APPLICATION_CREDENTIALS` not set
+
 ### ✅ v1.1 — Shipped
 
 #### Phase 7A — City Replacement ✅
@@ -546,11 +558,10 @@ The capstone presentation covers the full pipeline from data collection through 
 - [x] "Best time to ride today" recommendation
 - [x] Natural-language summary: available bikes at nearest station
 
-#### Phase 7F — GCP Streaming Dashboard ← **Priority 1 (v1.2.0 — UNBLOCKED)** 🔲
-- Python pipeline live ✅ — `bike_demand.station_snapshots` in BigQuery populated with real GBFS data (Python repo v3.0.0, 2026-05-15)
-- [ ] Add `bigrquery` to renv; query `bike_demand.station_snapshots` from Shiny
-- [ ] Surface live 5-min windowed avg/min/max bike availability on the dashboard
-- Pipeline code lives in `bike-demand-ml-system` (complete); this repo integrates the BigQuery output into the Shiny UI
+#### Phase 7F — GCP Streaming Dashboard ✅ (v1.2.0 — 2026-05-16)
+- [x] Python pipeline live — `bike_demand.station_snapshots` in BigQuery populated with real GBFS data (Python repo v3.0.0, 2026-05-15)
+- [x] `bigrquery` 1.6.2 + 22 deps added to `renv.lock` via `renv::record()`; `shiny_app/bigquery_client.R` created
+- [x] Live 5-min windowed avg/min/max bike availability on the GCP Stream tab; auto-refresh every 5 min
 
 #### Phase 7G — Documentation ✅
 - [x] README architecture diagram updated with full v1.1 stack
