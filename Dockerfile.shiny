@@ -36,7 +36,7 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
 # ── R package restore ─────────────────────────────────────────────────────────
 # Copy lockfile first so Docker can cache this expensive layer.
 # The renv::restore() step only re-runs when renv.lock changes.
-# lockfile — 139 packages, R 4.4.3
+# lockfile — 182 packages, R 4.4.3
 COPY renv.lock /tmp/renv.lock
 
 RUN R -e "\

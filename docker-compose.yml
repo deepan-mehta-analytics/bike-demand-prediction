@@ -24,8 +24,6 @@ services:
       - "8000:8000"                            # expose inference endpoint to host
     environment:
       - USE_PUBSUB=false                       # local mode: no GCP Pub/Sub billing
-    volumes:
-      - ../bike-demand-ml-system/models:/app/models  # mount pre-trained .pkl artifacts
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/"]  # probe the root health endpoint
       interval: 10s                            # check every 10 seconds
