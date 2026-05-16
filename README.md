@@ -524,13 +524,6 @@ The capstone presentation covers the full pipeline from data collection through 
 - [x] Add MIT LICENSE (2026, Deepan Mehta)
 - [x] Add GitHub Actions CI — Python + R smoke tests, `model.csv` integrity check
 
-### ✅ v1.2.0 — Released (2026-05-16)
-
-- [x] `shiny_app/bigquery_client.R` — BQ service-account auth, `query_city_trend()` (2h rolling window), `query_latest_snapshot()` (newest window per city)
-- [x] GCP Stream tab — `bigrquery` queries `bike_demand.station_snapshots`; ggplot2 ribbon (min/max band) + avg line; auto-refresh every 5 min
-- [x] `renv.lock` — bigrquery 1.6.2 + 22 deps added via `renv::record()` (182 packages total)
-- [x] Graceful degradation — tab shows 3-step setup instructions when `GOOGLE_APPLICATION_CREDENTIALS` not set
-
 ### ✅ v1.1 — Shipped
 
 #### Phase 7A — City Replacement ✅
@@ -570,6 +563,13 @@ The capstone presentation covers the full pipeline from data collection through 
 #### Phase 7H — Containerisation & CI ✅
 - [x] `Dockerfile.shiny` — rocker/shiny:4.4.3 base, renv restore via PPM, EXPOSE 3838
 - [x] CI extended with Docker Compose smoke test (`docker-compose-build` job)
+
+### ✅ v1.2.0 — Released (2026-05-16)
+
+- [x] `shiny_app/bigquery_client.R` — BQ service-account auth, `query_city_trend()` (2h rolling window), `query_latest_snapshot()` (newest window per city)
+- [x] GCP Stream tab — `bigrquery` queries `bike_demand.station_snapshots`; ggplot2 ribbon (min/max band) + avg line; auto-refresh every 5 min
+- [x] `renv.lock` — bigrquery 1.6.2 + 22 deps added via `renv::record()` (182 packages total)
+- [x] Graceful degradation — tab shows 3-step setup instructions when `GOOGLE_APPLICATION_CREDENTIALS` not set
 
 ### 🔮 Backlog — Priority Ordered
 
