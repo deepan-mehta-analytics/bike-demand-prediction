@@ -143,10 +143,13 @@ shinyServer(function(input, output, session) {
     live_stations_df(bind_rows(new_data))                            # update reactiveVal — triggers map re-render
   })
 
-  # ── Feed Health panel reactive ────────────────────────────────────────────
-  # Collapses feed_state into a list of per-city status records for renderUI.
-  feed_health_df <- reactive({
-    lapply(GBFS_CITIES, function(city) {                             # one record per city in display order
+  # ── Feed Health panel UI ──────────────────────────────────────────────────
+  # Renders a colour-coded row per city. Re-renders whenever feed_state changes
+  # (i.e. after every timer fire). Fills uiOutput("feed_health_panel") in ui.R.
+
+  output$feed_health_panel <- renderUI({
+
+    rows <- lapply(GBFS_CITIES, function(city) {                     # one record per city in display order
       s <- feed_state[[city]]                                        # read current city state from reactiveValues
       list(
         city       = city,                                           # CITY_ASCII string for display
@@ -156,17 +159,7 @@ shinyServer(function(input, output, session) {
         fetched_at = s$fetched_at,                                   # POSIXct of last fetch (or NULL)
         message    = s$message                                       # NULL or plain-English failure reason
       )
-    })
-  })
-
-
-  # ── Feed Health panel UI ──────────────────────────────────────────────────
-  # Renders a colour-coded row per city. Re-renders whenever feed_state changes
-  # (i.e. after every timer fire). Fills uiOutput("feed_health_panel") in ui.R.
-
-  output$feed_health_panel <- renderUI({
-
-    rows <- feed_health_df()                                         # current list of per-city status records
+    })                                                               # inline feed state collapsing (removed unnecessary reactive)
 
     # Section header
     header <- tags$div(
@@ -192,7 +185,7 @@ shinyServer(function(input, output, session) {
       body_text <- build_feed_status_text(r)                        # plain-English status sentence
       tags$div(
         style = sprintf(
-          "background:%s; border-left:4px solid %s; padding:9px 12px; border-bottom:1px solid #dde;",
+          "background:%s; border-left:4px solid %s; padding:9px 12px; border-bottom:1px solid #ddd;",
           cfg$bg, cfg$border
         ),
         tags$div(
