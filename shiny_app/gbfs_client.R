@@ -505,13 +505,19 @@ get_city_live_stations <- function(city_name) {
     }
   )
 
-  success <- nrow(result_tbl) > 0L                                # TRUE if parser returned >= 1 station row
+  if (!is.data.frame(result_tbl)) {                               # guard: non-throwing NULL path would break nrow()
+    warning(paste("parse_gbfs_stations returned non-tibble for", city_name, "— substituting empty schema"))
+    result_tbl <- EMPTY_STATIONS_SCHEMA                           # replace non-tibble with known-good zero-row schema
+  }
+
+  row_count <- nrow(result_tbl)                                   # computed once; reused in success check and list
+  success   <- row_count > 0L                                     # TRUE if parser returned >= 1 station row
 
   list(                                                           # enriched return — never a bare tibble
     data       = result_tbl,                                      # station rows (zero-row tibble on failure)
     status     = if (success) "ok" else "error",                  # machine-readable state
-    row_count  = nrow(result_tbl),                                # 0 on failure
-    fetched_at = Sys.time(),                                      # timestamp for staleness calculation
+    row_count  = row_count,                                       # 0 on failure; uses pre-computed variable
+    fetched_at = Sys.time(),                                      # timestamp at return (negligible skew vs HTTP call start at 5-min intervals)
     message    = if (success) NULL                                # NULL on success
                  else paste("No station data returned for", city_name)  # plain-English failure reason
   )
