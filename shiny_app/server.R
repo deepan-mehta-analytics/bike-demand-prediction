@@ -108,7 +108,7 @@ update_feed_state <- function(feed_state, city, result) {
 shinyServer(function(input, output, session) {
   
   # ---------------------------------------------------------------------------
-  # Fetch data once on startup
+  # Forecast data fetched once on startup; station data refreshes via reactiveTimer every 5 min
   # Each city now has 8 rows (8 x 3-hour slots = next 24 hours)
   # ---------------------------------------------------------------------------
   city_weather_bike_df <- test_weather_data_generation()
@@ -118,7 +118,7 @@ shinyServer(function(input, output, session) {
   # live_stations_df is a reactiveVal: the map re-renders automatically when
   # new station data arrives from the 5-minute timer.
 
-  GBFS_CITIES <- c("Seoul", "London", "New York", "Paris", "Chicago", "Washington DC")  # all tracked cities
+  GBFS_CITIES <- names(CITY_GBFS_CONFIG)                            # derived from config — single source of truth
 
   feed_state <- reactiveValues(                                      # one entry per city; "loading" until first fetch
     Seoul           = list(failures=0L, status="loading", row_count=0L, fetched_at=NULL, message=NULL),
