@@ -65,6 +65,8 @@ shinyUI(
           display: flex;
           flex-direction: column;
           gap: 12px;
+          max-height: calc(100vh - 80px);
+          overflow-y: auto;
         }
 
         /* ── Right sidebar ── */
@@ -113,6 +115,10 @@ shinyUI(
           letter-spacing: 1.2px;
           text-transform: uppercase;
           color: #008cba;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 200px;
         }
         /* Expand button — tiny icon button that sits in the card header */
         .btn-expand {
@@ -312,7 +318,13 @@ shinyUI(
                                  ),
                                  tags$p(class = "filter-hint", "Click to show / hide cities by demand level.")
                         ),
-                        
+
+                        # Feed Health panel — rendered server-side via output$feed_health_panel
+                        # Colour-coded rows: green (LIVE) / amber (DELAYED) / red (UNAVAILABLE)
+                        tags$div(class = "dash-card", style = "padding:0; overflow:hidden;",
+                                 uiOutput("feed_health_panel")
+                        ),
+
                         # Stats
                         tags$div(class = "dash-card",
                                  tags$h5("Coverage"),
