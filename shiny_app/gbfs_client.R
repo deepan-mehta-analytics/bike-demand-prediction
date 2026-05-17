@@ -26,10 +26,12 @@
 
 
 # ── Libraries ─────────────────────────────────────────────────────────────────
-if (!require(httr))    install.packages("httr")    # HTTP GET requests to GBFS endpoints
-if (!require(dplyr))   install.packages("dplyr")   # inner_join, bind_rows, filter, mutate
-if (!require(tibble))  install.packages("tibble")  # tibble() for schema-safe empty frames
-if (!require(purrr))   install.packages("purrr")   # map_chr / map_int for list extraction
+if (!require(httr))     install.packages("httr")     # HTTP GET requests to GBFS endpoints
+if (!require(curl))     install.packages("curl")     # raw curl handle for Seoul Brotli bypass
+if (!require(jsonlite)) install.packages("jsonlite") # JSON parser for Seoul raw-bytes path
+if (!require(dplyr))    install.packages("dplyr")    # inner_join, bind_rows, filter, mutate
+if (!require(tibble))   install.packages("tibble")   # tibble() for schema-safe empty frames
+if (!require(purrr))    install.packages("purrr")    # map_chr / map_int for list extraction
 
 
 # ── Null-coalescing operator ──────────────────────────────────────────────────
@@ -114,17 +116,37 @@ EMPTY_STATIONS_SCHEMA <- tibble(                                    # zero-row t
 #
 # Returns: parsed R list (from httr::content) or NULL on failure
 
-fetch_gbfs_json <- function(url) {
+fetch_gbfs_json <- function(url, disable_decompression = FALSE) {
   tryCatch({
-    resp <- GET(url, timeout(10))                                   # 10-second timeout; GBFS feeds are fast
-    if (http_error(resp)) {                                         # non-2xx status code from server
-      warning(paste("GBFS fetch failed:", url, "— HTTP", status_code(resp)))
-      return(NULL)                                                  # return NULL; caller handles gracefully
+    if (disable_decompression) {
+      # Seoul's API sends Brotli-encoded responses that libcurl cannot decode.
+      # Setting accept_encoding = NULL in the curl handle disables libcurl's
+      # auto-decompression entirely, so we receive the raw (uncompressed) body
+      # and parse it manually with jsonlite.
+      h <- curl::new_handle()                                      # fresh curl handle for this request
+      curl::handle_setopt(h, accept_encoding = NULL,               # disable auto-decompression (bypass Brotli)
+                             followlocation  = TRUE,               # follow HTTP redirects
+                             timeout         = 10L)                # 10-second timeout consistent with httr path
+      raw <- curl::curl_fetch_memory(url, handle = h)              # fetch raw bytes without decompression
+      if (raw$status_code != 200L) {                               # non-200 = API or auth error
+        warning(paste("GBFS fetch failed:", url, "— HTTP", raw$status_code))
+        return(NULL)
+      }
+      jsonlite::fromJSON(                                          # parse JSON string to R list
+        rawToChar(raw$content),                                    # convert raw bytes to UTF-8 string
+        simplifyVector = FALSE                                      # keep as nested lists (same as httr::content)
+      )
+    } else {
+      resp <- GET(url, timeout(10))                                # 10-second timeout; GBFS feeds are fast
+      if (http_error(resp)) {                                      # non-2xx status code from server
+        warning(paste("GBFS fetch failed:", url, "— HTTP", status_code(resp)))
+        return(NULL)                                               # return NULL; caller handles gracefully
+      }
+      content(resp, as = "parsed", encoding = "UTF-8")            # parse JSON into R list
     }
-    content(resp, as = "parsed", encoding = "UTF-8")               # parse JSON into R list
-  }, error = function(e) {                                          # catches network errors (no connection etc.)
+  }, error = function(e) {                                         # catches network errors (no connection etc.)
     warning(paste("GBFS network error:", url, "—", conditionMessage(e)))
-    NULL                                                            # return NULL on any network failure
+    NULL                                                           # return NULL on any network failure
   })
 }
 
@@ -331,7 +353,7 @@ parse_seoul_openapi <- function() {
   # ── Fetch first page ──────────────────────────────────────────────────────
   end_row   <- if (is_sample) 5L else 1000L                         # sample capped at 5; real key fetches 1,000
   url1      <- sprintf("%s/1/%d/", base_url, end_row)               # e.g. .../1/5/ or .../1/1000/
-  resp1     <- fetch_gbfs_json(url1)                                # reuse existing HTTP helper with 10s timeout
+  resp1     <- fetch_gbfs_json(url1, disable_decompression = TRUE)   # disable auto-decompression; Seoul sends Brotli
 
   if (is.null(resp1) || is.null(resp1$rentBikeStatus)) {            # null = network/HTTP error; missing key = bad structure
     warning("Seoul OpenAPI: first page fetch failed or unexpected JSON structure")
@@ -358,7 +380,7 @@ parse_seoul_openapi <- function() {
     for (page_start in page_starts) {                               # iterate each additional page
       page_end  <- min(page_start + 999L, total_count)              # don't overshoot the total count
       url_page  <- sprintf("%s/%d/%d/", base_url, page_start, page_end)
-      resp_page <- fetch_gbfs_json(url_page)                        # fetch with same 10s timeout
+      resp_page <- fetch_gbfs_json(url_page, disable_decompression = TRUE)  # same Brotli fix for all pages
 
       if (!is.null(resp_page) &&
           !is.null(resp_page$rentBikeStatus$row)) {                 # successful page — append rows

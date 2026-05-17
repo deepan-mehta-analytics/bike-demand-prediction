@@ -28,11 +28,11 @@ cities:
     iso2: "KR"                                            # ISO 3166-1 alpha-2 code
     timezone: "Asia/Seoul"                                # IANA timezone identifier
     gbfs_autodiscovery: null                              # Seoul does not use GBFS standard
-    live_station_api: "https://openapi.seoul.go.kr/openapi/service/rest/CycleInfo/getBicycleStationInfo"
-    live_api_key_env: "SEOUL_OPEN_API_KEY"               # env var holding the free API key
+    live_station_api: "http://openapi.seoul.go.kr:8088/{key}/json/bikeList/{start}/{end}/"
+    live_api_key_env: "SEOUL_API_KEY"                    # env var read by gbfs_client.R; defaults to "sample" (5-row demo)
     bigquery_dataset: null                                # no BigQuery public dataset for Seoul
     bigquery_project: null                                # BQ project (null = not applicable)
-    notes: "Requires free API key from data.seoul.go.kr. Register at https://data.seoul.go.kr"
+    notes: "Seoul Facilities Corporation OpenAPI. sample key = 5-row demo. Real key from data.seoul.go.kr registration."
 
   # ── London ────────────────────────────────────────────────────────────────
   - name: "London"                                        # display name in Shiny UI
