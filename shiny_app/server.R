@@ -548,20 +548,59 @@ shinyServer(function(input, output, session) {
   }
   
   
-  # ── Sidebar renders ───────────────────────────────────────────────────────
-  output$temp_line <- renderPlot({
+  # ── Shared chart reactives ────────────────────────────────────────────────
+  # One reactive per chart. Both sidebar and modal renderPlots consume the same
+  # reactive object — they are guaranteed to always show identical data.
+
+  temp_chart_obj <- reactive({                                       # temperature trend; invalidates on city change
     req(input$city_dropdown != "All")
     build_temp_chart(selected_city_data())
   })
-  
-  output$bike_line <- renderPlot({
+
+  bike_chart_obj <- reactive({                                       # bike demand forecast
     req(input$city_dropdown != "All")
     build_bike_chart(selected_city_data())
   })
-  
-  output$humidity_pred_chart <- renderPlot({
+
+  humidity_chart_obj <- reactive({                                   # humidity vs demand scatter
     req(input$city_dropdown != "All")
     build_humidity_chart(selected_city_data())
+  })
+
+  # Sidebar outputs — consume shared reactives
+  output$temp_line           <- renderPlot({ temp_chart_obj() })    # sidebar temperature chart
+  output$bike_line           <- renderPlot({ bike_chart_obj() })    # sidebar bike demand chart
+  output$humidity_pred_chart <- renderPlot({ humidity_chart_obj() }) # sidebar humidity chart
+
+  # Modal outputs — same reactive; guaranteed in sync with sidebar
+  output$temp_line_modal           <- renderPlot({ temp_chart_obj() })    # expanded temperature chart
+  output$bike_line_modal           <- renderPlot({ bike_chart_obj() })    # expanded bike demand chart
+  output$humidity_pred_chart_modal <- renderPlot({ humidity_chart_obj() }) # expanded humidity chart
+
+  # ── Reactive modal titles ─────────────────────────────────────────────────
+  # Static paste() in showModal() evaluates once at click-time. Using renderUI
+  # here means the title re-renders whenever input$city_dropdown changes,
+  # even if the modal is already open.
+
+  output$modal_title_temp <- renderUI({
+    tags$span(
+      tags$i(class="glyphicon glyphicon-signal", style="margin-right:8px; color:#008cba;"),
+      paste("Temperature -- Next 24h --", input$city_dropdown)      # reactive city name in title
+    )
+  })
+
+  output$modal_title_bike <- renderUI({
+    tags$span(
+      tags$i(class="glyphicon glyphicon-stats", style="margin-right:8px; color:#43ac6a;"),
+      paste("Bike Demand -- Next 24h --", input$city_dropdown)      # reactive city name in title
+    )
+  })
+
+  output$modal_title_humidity <- renderUI({
+    tags$span(
+      tags$i(class="glyphicon glyphicon-tint", style="margin-right:8px; color:#004e7c;"),
+      paste("Humidity vs Demand -- 24h --", input$city_dropdown)    # reactive city name in title
+    )
   })
   
   # ---------------------------------------------------------------------------
@@ -611,53 +650,35 @@ shinyServer(function(input, output, session) {
   # ── Expand modals ─────────────────────────────────────────────────────────
   observeEvent(input$expand_temp, {
     showModal(modalDialog(
-      title = tags$span(
-        tags$i(class = "glyphicon glyphicon-signal",
-               style = "margin-right:8px; color:#008cba;"),
-        paste("Temperature — Next 24h —", input$city_dropdown)
-      ),
+      title     = uiOutput("modal_title_temp"),                      # reactive title — updates on city change
       tags$div(class = "modal-chart-body",
                plotOutput("temp_line_modal", height = "430px")),
-      footer = modalButton("Close"), size = "l", easyClose = TRUE
+      footer    = modalButton("Close"),
+      size      = "l",
+      easyClose = TRUE
     ))
-  })
-  output$temp_line_modal <- renderPlot({
-    req(input$city_dropdown != "All")
-    build_temp_chart(selected_city_data())
   })
   
   observeEvent(input$expand_bike, {
     showModal(modalDialog(
-      title = tags$span(
-        tags$i(class = "glyphicon glyphicon-stats",
-               style = "margin-right:8px; color:#43ac6a;"),
-        paste("Bike Demand — Next 24h —", input$city_dropdown)
-      ),
+      title     = uiOutput("modal_title_bike"),                      # reactive title
       tags$div(class = "modal-chart-body",
                plotOutput("bike_line_modal", height = "430px")),
-      footer = modalButton("Close"), size = "l", easyClose = TRUE
+      footer    = modalButton("Close"),
+      size      = "l",
+      easyClose = TRUE
     ))
-  })
-  output$bike_line_modal <- renderPlot({
-    req(input$city_dropdown != "All")
-    build_bike_chart(selected_city_data())
   })
   
   observeEvent(input$expand_humidity, {
     showModal(modalDialog(
-      title = tags$span(
-        tags$i(class = "glyphicon glyphicon-tint",
-               style = "margin-right:8px; color:#004e7c;"),
-        paste("Humidity vs Demand — 24h —", input$city_dropdown)
-      ),
+      title     = uiOutput("modal_title_humidity"),                  # reactive title
       tags$div(class = "modal-chart-body",
                plotOutput("humidity_pred_chart_modal", height = "430px")),
-      footer = modalButton("Close"), size = "l", easyClose = TRUE
+      footer    = modalButton("Close"),
+      size      = "l",
+      easyClose = TRUE
     ))
-  })
-  output$humidity_pred_chart_modal <- renderPlot({
-    req(input$city_dropdown != "All")
-    build_humidity_chart(selected_city_data())
   })
   
 
