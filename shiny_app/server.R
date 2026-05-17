@@ -43,6 +43,7 @@ test_weather_data_generation <- function() {
 #   r — named list: city, status, failures, row_count, fetched_at, message
 
 build_feed_status_text <- function(r) {
+  stopifnot(is.list(r), !is.null(r$status))                         # guard: caller must supply a valid status record
   if (r$status == "loading")                                         # first load; not yet fetched
     return("Connecting to station data…")
 
@@ -90,13 +91,14 @@ update_feed_state <- function(feed_state, city, result) {
       message    = NULL
     )
   } else {                                                           # failed fetch -> amber or red
-    prev <- feed_state[[city]]$failures %||% 0L                      # guard: handle loading state
-    new_failures <- prev + 1L                                        # increment consecutive failure count
+    prev          <- feed_state[[city]]$failures %||% 0L             # guard: handle loading state
+    new_failures  <- prev + 1L                                       # increment consecutive failure count
+    prev_fetched  <- feed_state[[city]]$fetched_at                   # retain last-good timestamp (not the failed attempt)
     feed_state[[city]] <- list(
       failures   = new_failures,
       status     = if (new_failures >= 3L) "red" else "amber",       # 1-2 fails = amber; 3+ = red
       row_count  = 0L,
-      fetched_at = result$fetched_at,
+      fetched_at = prev_fetched,                                     # last time data was successfully received
       message    = result$message
     )
   }
