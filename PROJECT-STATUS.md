@@ -11,7 +11,7 @@ Both repos form a single portfolio system. Track them together here.
 
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
-| **bike_demand_prediction** (this repo) | R Shiny dashboard | v1.3.0 shipped — Feed Health Alerting panel live (colour-coded GBFS feed status, auto-refresh every 5 min) | ✅ Done | `66d4102` |
+| **bike_demand_prediction** (this repo) | R Shiny dashboard | v1.3.0 shipped — Feed Health Alerting panel live (colour-coded GBFS feed status, auto-refresh every 5 min) | ✅ Done | `5bc9b09` |
 | **bike-demand-ml-system** | Python FastAPI + ML training | Phase 5 (Vertex AI + MLflow) DONE — v4.0.0 released | ✅ Done | `9eb5b3c` |
 
 ### Trained City Models (Python repo)
