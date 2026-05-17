@@ -113,17 +113,35 @@ shinyServer(function(input, output, session) {
   # ---------------------------------------------------------------------------
   city_weather_bike_df <- test_weather_data_generation()
 
-  # Fetch live station availability from GBFS / TfL for all cities at startup.
-  # Wrapped in tryCatch so a network failure never prevents the app from loading.
-  # live_stations_df has columns: CITY_ASCII, STATION_ID, STATION_NAME, LAT, LNG,
-  #   AVAILABLE_BIKES, AVAILABLE_DOCKS, CAPACITY, IS_RENTING, LAST_UPDATED
-  live_stations_df <- tryCatch(
-    get_all_cities_live_stations(unique(city_weather_bike_df$CITY_ASCII)),  # one call covers all cities
-    error = function(e) {                                                    # GBFS outage must not crash app
-      warning(paste("GBFS startup fetch failed:", conditionMessage(e)))
-      EMPTY_STATIONS_SCHEMA                                                  # fall back to empty schema
-    }
+  # ── Feed state + live station data ──────────────────────────────────────────
+  # feed_state tracks per-city failure counts and display status.
+  # live_stations_df is a reactiveVal: the map re-renders automatically when
+  # new station data arrives from the 5-minute timer.
+
+  GBFS_CITIES <- c("Seoul", "London", "New York", "Paris", "Chicago", "Washington DC")  # all tracked cities
+
+  feed_state <- reactiveValues(                                      # one entry per city; "loading" until first fetch
+    Seoul           = list(failures=0L, status="loading", row_count=0L, fetched_at=NULL, message=NULL),
+    London          = list(failures=0L, status="loading", row_count=0L, fetched_at=NULL, message=NULL),
+    `New York`      = list(failures=0L, status="loading", row_count=0L, fetched_at=NULL, message=NULL),
+    Paris           = list(failures=0L, status="loading", row_count=0L, fetched_at=NULL, message=NULL),
+    Chicago         = list(failures=0L, status="loading", row_count=0L, fetched_at=NULL, message=NULL),
+    `Washington DC` = list(failures=0L, status="loading", row_count=0L, fetched_at=NULL, message=NULL)
   )
+
+  live_stations_df <- reactiveVal(EMPTY_STATIONS_SCHEMA)             # starts empty; replaced by first timer fire
+
+  gbfs_timer <- reactiveTimer(300000)                                # invalidates every 5 minutes (300,000 ms)
+
+  observe({                                                          # runs immediately on startup; re-runs every 5 min
+    gbfs_timer()                                                     # declare dependency on timer
+    new_data <- lapply(GBFS_CITIES, function(city) {                 # fetch each city independently
+      result <- get_city_live_stations(city)                         # enriched return: data + status + metadata
+      update_feed_state(feed_state, city, result)                    # update feed_state (side effect)
+      result$data                                                    # return just the tibble for stacking
+    })
+    live_stations_df(bind_rows(new_data))                            # update reactiveVal — triggers map re-render
+  })
 
   # Parse FORECASTDATETIME once globally so date range calculations work
   city_weather_bike_df <- city_weather_bike_df %>%
@@ -229,7 +247,7 @@ shinyServer(function(input, output, session) {
       selected_city_coords <- cities_max_bike %>% filter(CITY_ASCII == input$city_dropdown)  # city centre for setView
 
       # Filter live GBFS stations for the selected city; only show stations that are renting
-      city_stations <- live_stations_df %>%
+      city_stations <- live_stations_df() %>%                              # () reads current reactiveVal
         filter(CITY_ASCII == input$city_dropdown, IS_RENTING == TRUE)   # exclude closed / out-of-service stations
 
       if (nrow(city_stations) == 0) {
@@ -586,7 +604,7 @@ shinyServer(function(input, output, session) {
   })
 
   operator_stations <- reactive({                                           # live GBFS stations for selected city
-    live_stations_df %>%                                                    # all cities' station availability (Phase 7B)
+    live_stations_df() %>%                                                  # () inside reactive — declares dependency
       filter(CITY_ASCII == input$operator_city, IS_RENTING == TRUE)         # open stations only; skip closed/maintenance
   })
 
@@ -843,7 +861,7 @@ shinyServer(function(input, output, session) {
   })
 
   rider_stations <- reactive({                                             # live GBFS stations for selected rider city
-    live_stations_df %>%
+    live_stations_df() %>%                                                 # () inside reactive — re-evaluates on new data
       filter(CITY_ASCII == input$rider_city, IS_RENTING == TRUE)          # open stations only
   })
 
