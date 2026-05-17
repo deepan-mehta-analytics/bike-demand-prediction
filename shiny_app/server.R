@@ -30,6 +30,79 @@ test_weather_data_generation <- function() {
 }
 
 
+# =============================================================================
+# Feed Health helpers
+# =============================================================================
+
+# build_feed_status_text()
+# -------------------------
+# Returns a plain-English string for a city's current feed status.
+# Never exposes HTTP codes, R error messages, or API jargon to the user.
+#
+# Arguments:
+#   r — named list: city, status, failures, row_count, fetched_at, message
+
+build_feed_status_text <- function(r) {
+  if (r$status == "loading")                                         # first load; not yet fetched
+    return("Connecting to station data…")
+
+  if (r$status == "green") {
+    if (r$city == "Seoul" && r$row_count <= 5L)                      # sample key returns only 5 rows
+      return("Showing 5 demo stations (sample key). Full data requires a Seoul API key.")
+    return(paste0("All ", format(r$row_count, big.mark = ","), " stations reporting normally."))
+  }
+
+  mins_ago <- if (!is.null(r$fetched_at))                            # minutes since last successful data
+    as.integer(difftime(Sys.time(), r$fetched_at, units = "mins"))
+  else NA_integer_
+
+  if (r$status == "amber") {
+    if (!is.na(mins_ago) && mins_ago > 0L)
+      return(paste0(
+        "Station data is being refreshed — last update ",
+        mins_ago, " minute", if (mins_ago != 1L) "s" else "", " ago. Forecast is unaffected."
+      ))
+    return("Waiting for station data — retrying shortly. Forecast is unaffected.")
+  }
+
+  # red
+  "Station map is temporarily unavailable. Your 24-hour forecast is still running."
+}
+
+
+# update_feed_state()
+# --------------------
+# Mutates feed_state[[city]] in place based on the enriched result from
+# get_city_live_stations(). Increments failure count on error; resets on success.
+#
+# Arguments:
+#   feed_state — reactiveValues object (defined inside shinyServer)
+#   city       — CITY_ASCII string matching a key in feed_state
+#   result     — named list returned by get_city_live_stations()
+
+update_feed_state <- function(feed_state, city, result) {
+  if (result$status == "ok") {                                       # successful fetch -> green
+    feed_state[[city]] <- list(
+      failures   = 0L,                                               # reset failure counter
+      status     = "green",
+      row_count  = result$row_count,
+      fetched_at = result$fetched_at,
+      message    = NULL
+    )
+  } else {                                                           # failed fetch -> amber or red
+    prev <- feed_state[[city]]$failures %||% 0L                      # guard: handle loading state
+    new_failures <- prev + 1L                                        # increment consecutive failure count
+    feed_state[[city]] <- list(
+      failures   = new_failures,
+      status     = if (new_failures >= 3L) "red" else "amber",       # 1-2 fails = amber; 3+ = red
+      row_count  = 0L,
+      fetched_at = result$fetched_at,
+      message    = result$message
+    )
+  }
+}
+
+
 shinyServer(function(input, output, session) {
   
   # ---------------------------------------------------------------------------
