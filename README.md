@@ -8,7 +8,7 @@ This project delivers a full-stack predictive analytics system for bike-sharing 
 
 The R pipeline benchmarks six model classes on a chronological 80/20 held-out split, achieving a Random Forest with R²=0.730 (RMSE 333.89 bikes/hr) — a 39% improvement over the baseline linear model. The Bikecast Shiny dashboard provides live 24-hour demand forecasts for six global cities rendered on an interactive Leaflet map, with city drill-down showing live GBFS station availability markers, demand-band filtering, and expand-to-modal charts.
 
-**v1.2 is shipped.** Phase 7 extended the dashboard into two real end-user tools: an **Operator tab** (fleet rebalancing alerts, demand vs. station capacity) and a **Rider tab** (live availability score, best-time recommendation, natural-language summary). The prediction backend is a Python FastAPI inference service (RF RMSE 173 bikes/hr) live on **GCP Cloud Run**; Docker Compose runs the full stack locally. **v1.2 adds a GCP Stream tab** — `bigrquery` queries `bike_demand.station_snapshots` in BigQuery directly from the Shiny app, displaying live 5-minute windowed avg/min/max bike availability for NYC, DC, London, and Chicago fed by the Apache Beam / Dataflow streaming pipeline (Python repo v3.0.0).
+**v1.3 is shipped.** Phase 7 extended the dashboard into two real end-user tools: an **Operator tab** (fleet rebalancing alerts, demand vs. station capacity) and a **Rider tab** (live availability score, best-time recommendation, natural-language summary). The prediction backend is a Python FastAPI inference service (RF RMSE 173 bikes/hr) live on **GCP Cloud Run**; Docker Compose runs the full stack locally. **v1.2 adds a GCP Stream tab** — `bigrquery` queries `bike_demand.station_snapshots` in BigQuery directly from the Shiny app, displaying live 5-minute windowed avg/min/max bike availability for NYC, DC, London, and Chicago fed by the Apache Beam / Dataflow streaming pipeline (Python repo v3.0.0). **v1.3 adds a real-time Feed Health panel** — colour-coded GBFS feed status (LIVE / DELAYED / DOWN) per city in the sidebar, auto-refreshing every 5 minutes with graceful demo fallback when the OpenWeather API key is not set.
 
 ### End-to-end ML pipeline: raw Seoul data → six competing models → live global demand forecast
 
@@ -23,7 +23,8 @@ The R pipeline benchmarks six model classes on a chronological 80/20 held-out sp
 ![Machine Learning](https://img.shields.io/badge/Machine%20Learning-Regression-orange?style=for-the-badge)
 ![Status](https://img.shields.io/badge/v1.1-Released-success?style=for-the-badge)
 ![Status](https://img.shields.io/badge/v1.2-Released-success?style=for-the-badge)
-![Status](https://img.shields.io/badge/v1.3-In%20Development-blue?style=for-the-badge)
+![Status](https://img.shields.io/badge/v1.3-Released-success?style=for-the-badge)
+![Status](https://img.shields.io/badge/v1.4-In%20Development-blue?style=for-the-badge)
 ![API](https://img.shields.io/badge/API-OpenWeather-blue?style=for-the-badge)
 ![IBM](https://img.shields.io/badge/IBM-Data%20Analytics%20Capstone-054ADA?style=for-the-badge&logo=ibm&logoColor=white)
 
@@ -369,9 +370,12 @@ A professional three-column dashboard built on the **Yeti Bootswatch** theme.
 **Features (v1.2 — shipped):**
 - **GCP Stream tab** — `bigrquery` queries `bike_demand.station_snapshots` in BigQuery; displays live 5-min windowed avg/min/max bike availability for NYC, DC, London, Chicago; auto-refreshes every 5 min *(Phase 7F ✅)*
 
-**In development (v1.3):**
-- **Seoul live stations** — GBFS integration pending Seoul Open API key registration
+**Features (v1.3 — shipped):**
+- **Feed Health panel** — colour-coded sidebar panel (LIVE / DELAYED / DOWN) per city; `reactiveTimer` auto-refresh every 5 min; graceful demo fallback when `OPENWEATHER_KEY` not set *(v1.3.0 ✅)*
+
+**In development (v1.4):**
 - **Paris / Chicago RF models** — replace Seoul fallback proxy with city-specific models
+- **Seoul live stations** — GBFS integration pending Seoul Open API key registration
 
 **Demand bands:**
 
@@ -571,10 +575,19 @@ The capstone presentation covers the full pipeline from data collection through 
 - [x] `renv.lock` — bigrquery 1.6.2 + 22 deps added via `renv::record()` (182 packages total)
 - [x] Graceful degradation — tab shows 3-step setup instructions when `GOOGLE_APPLICATION_CREDENTIALS` not set
 
+### ✅ v1.3.0 — Released (2026-05-17)
+
+- [x] Feed Health sidebar panel — colour-coded Bootstrap rows (panel-success / panel-warning / panel-danger) per city GBFS feed
+- [x] `reactiveTimer(300000)` auto-refresh; `feed_state` reactiveValues; `live_stations_df` reactiveVal replaces startup-only static fetch
+- [x] `build_feed_status_text()` + `update_feed_state()` — LIVE / DELAYED / DOWN with minutes-since-last-fetch age
+- [x] Shared chart reactives — sidebar and modal consume same reactive object; modal titles reactive to city dropdown
+- [x] Demo fallback — `generate_demo_weather_data()` serves synthetic forecast when `OPENWEATHER_KEY` not set; server never crashes
+- [x] Three bug fixes: reactive self-invalidation loop (`isolate()`); server crash on missing API key (`tryCatch`); flex-item height collapse (`overflow:hidden` on inner div)
+
 ### 🔮 Backlog — Priority Ordered
 
 - [x] Washington DC added — Capital Bikeshare GBFS v2, RF model RMSE 97.47 bikes/hr
-- [ ] **Priority 5** — Train Paris + Chicago RF models (source Vélib' / Divvy data) to replace Seoul proxy (v1.3.0)
+- [ ] **Priority 5** — Train Paris + Chicago RF models (source Vélib' / Divvy data) to replace Seoul proxy (v1.4.0)
 - [ ] **Priority 6** — pytest / testthat unit tests for ETL and model evaluation functions
 - [ ] **Priority 7** — Seoul GBFS integration (free API key at data.seoul.go.kr)
 - [ ] **Priority 8** — Expand to 8 cities — San Francisco (Ford GoBike) or Amsterdam (OV-fiets)
