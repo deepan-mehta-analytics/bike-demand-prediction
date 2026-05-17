@@ -476,6 +476,49 @@ parse_gbfs_stations <- function(city_name) {
 
 
 # =============================================================================
+# SECTION 5b — Per-city enriched fetch
+# =============================================================================
+
+# get_city_live_stations()
+# -------------------------
+# Wraps parse_gbfs_stations() and returns a named list instead of a bare tibble.
+# The list carries status metadata so server.R can track feed health without
+# inferring success/failure from nrow().
+#
+# Arguments:
+#   city_name — CITY_ASCII string (must be a key in CITY_GBFS_CONFIG)
+#
+# Returns: named list with fields:
+#   data       — tibble matching EMPTY_STATIONS_SCHEMA (rows on success, 0 rows on failure)
+#   status     — "ok" | "error"
+#   row_count  — integer; nrow(data)
+#   fetched_at — POSIXct; Sys.time() at moment of return
+#   message    — NULL on success; plain-English string on failure
+
+get_city_live_stations <- function(city_name) {
+
+  result_tbl <- tryCatch(                                          # catch unexpected runtime errors
+    parse_gbfs_stations(city_name),                               # routes to correct parser for this city
+    error = function(e) {
+      warning(paste("Unexpected error fetching", city_name, ":", conditionMessage(e)))
+      EMPTY_STATIONS_SCHEMA                                       # degrade gracefully
+    }
+  )
+
+  success <- nrow(result_tbl) > 0L                                # TRUE if parser returned >= 1 station row
+
+  list(                                                           # enriched return — never a bare tibble
+    data       = result_tbl,                                      # station rows (zero-row tibble on failure)
+    status     = if (success) "ok" else "error",                  # machine-readable state
+    row_count  = nrow(result_tbl),                                # 0 on failure
+    fetched_at = Sys.time(),                                      # timestamp for staleness calculation
+    message    = if (success) NULL                                # NULL on success
+                 else paste("No station data returned for", city_name)  # plain-English failure reason
+  )
+}
+
+
+# =============================================================================
 # SECTION 6 — Main entry point
 # =============================================================================
 
