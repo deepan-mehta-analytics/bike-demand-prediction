@@ -11,7 +11,7 @@ Both repos form a single portfolio system. Track them together here.
 
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
-| **bike_demand_prediction** (this repo) | R Shiny dashboard | Phase 7F complete — GCP Stream tab live (v1.2.0); server.R refactors ongoing (Tasks 3–5) | ✅ Done | `a37ecb3` |
+| **bike_demand_prediction** (this repo) | R Shiny dashboard | v1.3.0 shipped — Feed Health Alerting panel live (colour-coded GBFS feed status, auto-refresh every 5 min) | ✅ Done | `1a7ed0d` |
 | **bike-demand-ml-system** | Python FastAPI + ML training | Phase 5 (Vertex AI + MLflow) DONE — v4.0.0 released | ✅ Done | `9eb5b3c` |
 
 ### Trained City Models (Python repo)
@@ -33,7 +33,8 @@ Both repos form a single portfolio system. Track them together here.
 | ~~1~~ | bike-demand-ml-system | ~~Phase 4 — Pub/Sub + Dataflow~~ | ~~v3.0.0~~ | **✅ Shipped** |
 | ~~1~~ | bike_demand_prediction | ~~Phase 7F — GCP Streaming Dashboard~~ | ~~v1.2.0~~ | **✅ Shipped** |
 | ~~2~~ | bike-demand-ml-system | ~~Phase 5 — Vertex AI + MLflow~~ | ~~v4.0.0~~ | **✅ Shipped (2026-05-17)** |
-| **4** | bike_demand_prediction | Backlog — Paris/Chicago models | v1.3.0 | Data sourcing required |
+| ~~3~~ | bike_demand_prediction | ~~Feed Health Alerting — sidebar GBFS status panel~~ | ~~v1.3.0~~ | **✅ Shipped (2026-05-17)** |
+| **4** | bike_demand_prediction | Backlog — Paris/Chicago models | v1.4.0 | Data sourcing required |
 | **5** | Both | Backlog — testthat / pytest | — | None |
 | **6** | bike_demand_prediction | Backlog — Seoul GBFS | — | External API key |
 | **7** | bike_demand_prediction | Backlog — City expansion (SF/Amsterdam) | — | Data sourcing required |
@@ -104,6 +105,16 @@ Both repos form a single portfolio system. Track them together here.
 * `renv.lock` — bigrquery 1.6.2 + 22 dependency packages added via `renv::record()` (182 total)
 * Graceful degradation — GCP Stream tab shows 3-step setup instructions when `GOOGLE_APPLICATION_CREDENTIALS` is not set; never crashes the app
 
+### v1.3.0 — Released 2026-05-17 (Feed Health Alerting Sprint — 11 tasks, commits 73822a2 → 1a7ed0d)
+* `shiny_app/gbfs_client.R` — `get_city_live_stations()` enriched return: `list(df, row_count, error_msg)` — callers get structured metadata without re-querying
+* `shiny_app/server.R` — `build_feed_status_text()` (LIVE/DELAYED/DOWN + minutes-ago age) + `update_feed_state()` (per-city failure counting; amber after 1-2, red after 3+) helper functions
+* `shiny_app/server.R` — `reactiveTimer(300000)` auto-refresh; `feed_state` reactiveValues per city; `live_stations_df` reactiveVal (replaces startup-only static fetch)
+* `shiny_app/server.R` — `output$feed_health_panel` renderUI: Bootstrap colour-coded panel per city (panel-success LIVE / panel-warning DELAYED / panel-danger DOWN)
+* `shiny_app/server.R` — 3 shared chart reactives (`temp_chart_obj`, `bike_chart_obj`, `humidity_chart_obj`); modal expand titles now reactive to city dropdown
+* `shiny_app/ui.R` — `dash-left` overflow scroll; chart-header ellipsis; `uiOutput("feed_health_panel")` wired in sidebar
+* Bug fixes: `isolate()` on `feed_state` reads in `update_feed_state()` (prevented reactive self-invalidation loop); `tryCatch` + `generate_demo_weather_data()` fallback (prevented server crash when `OPENWEATHER_KEY` not set); `overflow:hidden` moved to inner div (fixed flex item height-collapse in column-flex container)
+* Browser-verified: Seoul LIVE/5 demo stations, London LIVE/799, NYC LIVE/2406, Paris DELAYED/amber (DNS), Chicago LIVE/2000, DC LIVE/831; modal title reacts to city dropdown ✓
+
 ---
 
 ## ⚠️ Known Limitations
@@ -124,7 +135,7 @@ Both repos form a single portfolio system. Track them together here.
 * bigrquery 1.6.2 + 22 deps added to `renv.lock` via `renv::record()`
 * Commits `9b1fd47` (code) + `1764b19` (renv.lock) pushed to origin/main
 
-### Backlog — Priority 5: Paris/Chicago models (v1.3.0)
+### Backlog — Priority 5: Paris/Chicago models (v1.4.0)
 * Train Paris RF model — source Vélib' Métropole open data (Paris OpenData portal)
 * Train Chicago RF model — source Divvy trip data (Chicago Data Portal)
 * Removes Seoul fallback proxy for both cities; improves prediction accuracy
@@ -145,10 +156,10 @@ Both repos form a single portfolio system. Track them together here.
 
 ## 🚀 Next Step
 
-**v1.2.0 shipped (2026-05-16) — Phase 7F complete.** The GCP Stream tab is live: bigrquery queries `bike_demand.station_snapshots` from Shiny, displaying live 5-minute windowed avg/min/max bike availability for NYC, DC, London, and Chicago.
+**v1.3.0 shipped (2026-05-17) — Feed Health Alerting complete.** The sidebar now shows a colour-coded feed health panel for all 6 cities, auto-refreshing every 5 minutes. GBFS feeds show LIVE / DELAYED / DOWN with minutes-since-last-refresh. Three bugs fixed during browser verification (reactive self-invalidation loop, server crash on missing API key, flex-item height collapse).
 
-**Next priority (v1.3.0):** Train Paris and Chicago RF models to replace the Seoul fallback proxy. Source Vélib' open data (Paris OpenData portal) and Divvy trip data (Chicago Data Portal).
+**Next priority (v1.4.0):** Train Paris and Chicago RF models to replace the Seoul fallback proxy. Source Vélib' open data (Paris OpenData portal) and Divvy trip data (Chicago Data Portal).
 
-*Latest commit `1764b19` — renv.lock updated with bigrquery 1.6.2 + 22 deps (2026-05-16).*
+*Latest commit `1a7ed0d` — fix(shiny): resolve feed health panel invisible + server crash on missing API key (2026-05-17).*
 
 Resume with: `"resume bike demand prediction project"`
