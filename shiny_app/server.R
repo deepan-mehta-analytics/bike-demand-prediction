@@ -143,6 +143,83 @@ shinyServer(function(input, output, session) {
     live_stations_df(bind_rows(new_data))                            # update reactiveVal — triggers map re-render
   })
 
+  # ── Feed Health panel reactive ────────────────────────────────────────────
+  # Collapses feed_state into a list of per-city status records for renderUI.
+  feed_health_df <- reactive({
+    lapply(GBFS_CITIES, function(city) {                             # one record per city in display order
+      s <- feed_state[[city]]                                        # read current city state from reactiveValues
+      list(
+        city       = city,                                           # CITY_ASCII string for display
+        status     = s$status,                                       # "loading" | "green" | "amber" | "red"
+        failures   = s$failures,                                     # consecutive failure count
+        row_count  = s$row_count,                                    # number of stations returned
+        fetched_at = s$fetched_at,                                   # POSIXct of last fetch (or NULL)
+        message    = s$message                                       # NULL or plain-English failure reason
+      )
+    })
+  })
+
+
+  # ── Feed Health panel UI ──────────────────────────────────────────────────
+  # Renders a colour-coded row per city. Re-renders whenever feed_state changes
+  # (i.e. after every timer fire). Fills uiOutput("feed_health_panel") in ui.R.
+
+  output$feed_health_panel <- renderUI({
+
+    rows <- feed_health_df()                                         # current list of per-city status records
+
+    # Section header
+    header <- tags$div(
+      style = "padding:10px 12px 6px; border-bottom:1px solid #ddd;",
+      tags$div(
+        style = "font-size:11px; text-transform:uppercase; font-weight:700;
+                 letter-spacing:0.05em; color:#555;",
+        "Live Data Status"
+      ),
+      tags$div(style = "font-size:11px; color:#888; margin-top:2px;",
+               "Refreshes every 5 minutes")
+    )
+
+    # One colour-coded row per city
+    city_rows <- lapply(rows, function(r) {
+      cfg <- switch(r$status,
+        loading = list(bg="#f8f8f8", border="#cccccc", badge_bg="#aaaaaa", label="..."),
+        green   = list(bg="#f0faf2", border="#27ae60", badge_bg="#27ae60", label="LIVE"),
+        amber   = list(bg="#fffbf0", border="#f39c12", badge_bg="#f39c12", label="DELAYED"),
+        red     = list(bg="#fff5f5", border="#e74c3c", badge_bg="#e74c3c", label="UNAVAILABLE"),
+                  list(bg="#f8f8f8", border="#cccccc", badge_bg="#aaaaaa", label="?")  # fallback
+      )
+      body_text <- build_feed_status_text(r)                        # plain-English status sentence
+      tags$div(
+        style = sprintf(
+          "background:%s; border-left:4px solid %s; padding:9px 12px; border-bottom:1px solid #dde;",
+          cfg$bg, cfg$border
+        ),
+        tags$div(
+          style = "display:flex; justify-content:space-between; align-items:center;",
+          tags$span(style = "font-weight:600; color:#1a1a1a; font-size:13px;", r$city),
+          tags$span(
+            style = sprintf(
+              "background:%s; color:white; font-size:10px; padding:2px 7px;
+               border-radius:10px; font-weight:600;",
+              cfg$badge_bg
+            ),
+            cfg$label
+          )
+        ),
+        tags$div(style = "color:#555; font-size:11px; margin-top:3px;", body_text)
+      )
+    })
+
+    # Footer note
+    footer <- tags$div(
+      style = "padding:8px 12px; background:#f8f8f8; font-size:10px; color:#999; border-top:1px solid #ddd;",
+      "Station maps show live availability. Forecasts always run independently."
+    )
+
+    tagList(header, city_rows, footer)
+  })
+
   # Parse FORECASTDATETIME once globally so date range calculations work
   city_weather_bike_df <- city_weather_bike_df %>%
     mutate(FORECASTDATETIME_DT = as.POSIXct(FORECASTDATETIME,
