@@ -23,10 +23,18 @@ source("bigquery_client.R")     # BigQuery auth + trend/snapshot queries (Phase 
 BQ_AVAILABLE <- bq_auth_safe()  # FALSE if not configured — GCP Stream tab shows setup instructions
 
 test_weather_data_generation <- function() {
-  city_weather_bike_df <- generate_city_weather_bike_data()
-  stopifnot(length(city_weather_bike_df) > 0)
-  print(head(city_weather_bike_df))
-  return(city_weather_bike_df)
+  tryCatch({                                                           # catch weather API errors (e.g. missing key)
+    df <- generate_city_weather_bike_data()                           # live OpenWeather 5-day forecast path
+    stopifnot(length(df) > 0)                                        # guard: abort if response is empty
+    print(head(df))                                                   # log first rows for debugging
+    df                                                                # return live data
+  }, error = function(e) {
+    warning(paste(                                                     # log the reason but don't crash server
+      "[Bikecast demo mode] Weather API unavailable — serving synthetic",
+      "24-hour forecast. Error:", conditionMessage(e)
+    ))
+    generate_demo_weather_data()                                      # static fallback — model.csv predictions
+  })
 }
 
 
@@ -91,9 +99,9 @@ update_feed_state <- function(feed_state, city, result) {
       message    = NULL
     )
   } else {                                                           # failed fetch -> amber or red
-    prev          <- feed_state[[city]]$failures %||% 0L             # guard: handle loading state
+    prev          <- isolate(feed_state[[city]]$failures) %||% 0L   # isolate: read without declaring reactive dep
     new_failures  <- prev + 1L                                       # increment consecutive failure count
-    prev_fetched  <- feed_state[[city]]$fetched_at                   # retain last-good timestamp (not the failed attempt)
+    prev_fetched  <- isolate(feed_state[[city]]$fetched_at)          # isolate: read without declaring reactive dep
     feed_state[[city]] <- list(
       failures   = new_failures,
       status     = if (new_failures >= 3L) "red" else "amber",       # 1-2 fails = amber; 3+ = red

@@ -321,8 +321,12 @@ shinyUI(
 
                         # Feed Health panel — rendered server-side via output$feed_health_panel
                         # Colour-coded rows: green (LIVE) / amber (DELAYED) / red (UNAVAILABLE)
-                        tags$div(class = "dash-card", style = "padding:0; overflow:hidden;",
-                                 uiOutput("feed_health_panel")
+                        # Note: overflow:hidden is on an INNER div, not the flex-item dash-card.
+                        # A flex item with overflow:hidden collapses to height:0 in column-flex
+                        # containers — moving it inward lets the flex item size to its content.
+                        tags$div(class = "dash-card", style = "padding:0;",
+                                 tags$div(style = "overflow:hidden; border-radius:10px;",
+                                          uiOutput("feed_health_panel"))
                         ),
 
                         # Stats

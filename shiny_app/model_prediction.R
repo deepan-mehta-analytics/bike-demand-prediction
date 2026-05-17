@@ -529,3 +529,76 @@ generate_city_weather_bike_data <- function() {
   
   return(cities_bike_pred)  # Return the complete data frame to server.R
 }
+
+
+# -----------------------------------------------------------------------------
+# SECTION 8 — generate_demo_weather_data()
+# -----------------------------------------------------------------------------
+# Returns a synthetic 24-hour forecast dataset when the OpenWeather API is
+# unavailable (missing or expired OPENWEATHER_KEY).  Uses realistic May values
+# per city and the same model.csv linear predictor so BIKE_PREDICTION is real.
+#
+# Returns: tibble matching the schema of generate_city_weather_bike_data()
+
+generate_demo_weather_data <- function() {
+
+  # ── City parameters — realistic May conditions (metric) ─────────────────────
+  city_params <- tibble(                                              # one row per supported city
+    CITY_ASCII  = c("Seoul", "London", "New York", "Paris", "Chicago", "Washington DC"),
+    LAT         = c(37.5833, 51.5072, 40.6943, 48.8566, 41.8781, 38.8951),
+    LNG         = c(127.0000, -0.1275, -73.9249,  2.3522, -87.6298, -77.0364),
+    TEMPERATURE = c(18.0, 14.0, 20.0, 16.0, 18.0, 22.0),           # Celsius, typical May daytime
+    HUMIDITY    = c(62L, 72L, 58L, 68L, 60L, 65L),                  # percent relative humidity
+    WIND_SPEED  = c(3.5, 4.2, 3.8, 3.0, 5.1, 4.4),                 # m/s surface wind
+    VISIBILITY  = c(10000L, 8000L, 9000L, 7000L, 10000L, 9500L)     # metres
+  )
+
+  # ── Time grid — 8 slots, 3 hours apart from now (UTC) ───────────────────────
+  base_time      <- Sys.time()                                        # current UTC time as forecast anchor
+  offsets_secs   <- seq(0L, 21L, by = 3L) * 3600L                   # 0, 3, ..., 21 hours in seconds
+  slot_times     <- base_time + offsets_secs                          # 8 POSIXct timestamps
+
+  current_month  <- as.integer(format(base_time, "%m", tz = "UTC"))  # month 1-12 for season determination
+  current_season <- if      (current_month >= 3L  && current_month <= 5L)  "SPRING"
+                    else if (current_month >= 6L  && current_month <= 8L)  "SUMMER"
+                    else if (current_month >= 9L  && current_month <= 11L) "AUTUMN"
+                    else                                                    "WINTER"
+
+  slots <- tibble(                                                    # one row per forecast slot
+    FORECASTDATETIME = format(slot_times, "%Y-%m-%d %H:%M:%S", tz = "UTC"), # "YYYY-MM-DD HH:MM:SS" string
+    HOURS            = as.integer(format(slot_times, "%H", tz = "UTC")),     # hour of day 0-23
+    SEASONS          = current_season                                          # same season across all slots
+  )
+
+  # ── Cross-join: 6 cities × 8 slots = 48 rows ────────────────────────────────
+  df <- cross_join(city_params, slots)                                # every city paired with every slot
+
+  # ── Bike demand prediction + HTML popup labels ───────────────────────────────
+  df %>%
+    mutate(
+      BIKE_PREDICTION       = predict_bike_demand(                    # model.csv linear regression
+        TEMPERATURE, HUMIDITY, WIND_SPEED, VISIBILITY, SEASONS, HOURS
+      ),
+      BIKE_PREDICTION_LEVEL = calculate_bike_prediction_level(BIKE_PREDICTION),  # "small"/"medium"/"large"
+      LABEL                 = paste0(                                 # short popup for overview map
+        "<b><a href=''>", CITY_ASCII, "</a></b></br>",
+        "<b>[Demo — Clear]</b></br>"
+      ),
+      DETAILED_LABEL        = paste0(                                 # full popup for city drill-down
+        "<b><a href=''>", CITY_ASCII, "</a></b></br>",
+        "<b>[Demo data — weather API key not set]</b></br>",
+        "Temperature: ", TEMPERATURE, " C </br>",
+        "Visibility: ",  VISIBILITY,  " m </br>",
+        "Humidity: ",    HUMIDITY,    " % </br>",
+        "Wind Speed: ",  WIND_SPEED,  " m/s </br>",
+        "Datetime: ",    FORECASTDATETIME, " </br>"
+      )
+    ) %>%
+    select(                                                            # keep only columns server.R expects
+      CITY_ASCII, LNG, LAT,
+      TEMPERATURE, HUMIDITY,
+      BIKE_PREDICTION, BIKE_PREDICTION_LEVEL,
+      LABEL, DETAILED_LABEL,
+      FORECASTDATETIME
+    )
+}
