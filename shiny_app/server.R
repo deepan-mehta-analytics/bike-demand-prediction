@@ -585,21 +585,21 @@ shinyServer(function(input, output, session) {
   output$modal_title_temp <- renderUI({
     tags$span(
       tags$i(class="glyphicon glyphicon-signal", style="margin-right:8px; color:#008cba;"),
-      paste("Temperature -- Next 24h --", input$city_dropdown)      # reactive city name in title
+      paste("Temperature — Next 24h —", input$city_dropdown)      # reactive city name in title
     )
   })
 
   output$modal_title_bike <- renderUI({
     tags$span(
       tags$i(class="glyphicon glyphicon-stats", style="margin-right:8px; color:#43ac6a;"),
-      paste("Bike Demand -- Next 24h --", input$city_dropdown)      # reactive city name in title
+      paste("Bike Demand — Next 24h —", input$city_dropdown)      # reactive city name in title
     )
   })
 
   output$modal_title_humidity <- renderUI({
     tags$span(
       tags$i(class="glyphicon glyphicon-tint", style="margin-right:8px; color:#004e7c;"),
-      paste("Humidity vs Demand -- 24h --", input$city_dropdown)    # reactive city name in title
+      paste("Humidity vs Demand — 24h —", input$city_dropdown)    # reactive city name in title
     )
   })
   
