@@ -8,14 +8,16 @@
 # (UC2) tabs, and by the city drill-down map view.
 #
 # Three feed types are handled:
-#   "gbfs"  — standard GBFS v2 (NYC, Paris, Chicago)
-#             Two requests: station_information.json + station_status.json
-#             Joined on station_id to produce one row per station
-#   "tfl"   — London TfL BikePoint API (proprietary format, single endpoint)
-#             Properties NbBikes / NbEmptyDocks / NbDocks extracted from
-#             the additionalProperties array in each feature object
-#   "skip"  — Seoul (Seoul Open API requires free key registration at
-#             data.seoul.go.kr; returns empty tibble gracefully until key added)
+#   "gbfs"          — standard GBFS v2 (NYC, Paris, Chicago)
+#                     Two requests: station_information.json + station_status.json
+#                     Joined on station_id to produce one row per station
+#   "tfl"           — London TfL BikePoint API (proprietary format, single endpoint)
+#                     Properties NbBikes / NbEmptyDocks / NbDocks extracted from
+#                     the additionalProperties array in each feature object
+#   "seoul_openapi" — Seoul 따릉이 (Seoul Facilities Corporation OpenAPI)
+#                     Endpoint: http://openapi.seoul.go.kr:8088/{key}/json/bikeList/{start}/{end}/
+#                     Set SEOUL_API_KEY env var to enable; defaults to "sample" (5-row demo mode)
+#                     NOTE: port 8088 must be reachable from the host — some firewalls block it
 #
 # All functions wrap HTTP calls in tryCatch — a GBFS failure must never
 # crash the Shiny app. On error, an empty tibble with the correct schema
@@ -44,8 +46,8 @@ if (!require(purrr))   install.packages("purrr")   # map_chr / map_int for list 
 
 CITY_GBFS_CONFIG <- list(                                           # named list keyed by CITY_ASCII
 
-  "Seoul" = list(                                                   # Seoul Open API requires API key
-    type = "skip"                                                   # skip until SEOUL_OPEN_API_KEY is set
+  "Seoul" = list(                                                   # Seoul 따릉이 — Seoul Facilities Corporation OpenAPI
+    type = "seoul_openapi"                                          # set SEOUL_API_KEY env var; defaults to "sample" (5-row demo)
   ),
 
   "London" = list(                                                  # TfL BikePoint — not GBFS spec
@@ -276,7 +278,143 @@ parse_tfl_bikepoint <- function(status_url) {
 
 
 # =============================================================================
-# SECTION 4 — Per-city dispatcher
+# SECTION 4 — Seoul 따릉이 OpenAPI parser
+# =============================================================================
+
+# parse_seoul_openapi()
+# ----------------------
+# Fetches real-time station data from the Seoul Facilities Corporation OpenAPI.
+#
+# API endpoint pattern:
+#   http://openapi.seoul.go.kr:8088/{key}/json/bikeList/{start}/{end}/
+#
+# Key behaviour:
+#   SEOUL_API_KEY = "sample"  → dev/demo mode; fetches rows 1-5 only (hard cap)
+#   SEOUL_API_KEY = <real key> → paginated: 1/1000, then 1001/2000, etc. until
+#                                list_total_count is covered
+#
+# Seoul API response structure (differs from GBFS v2):
+#   { "rentBikeStatus": {
+#       "list_total_count": 1471,
+#       "RESULT": { "CODE": "INFO-000", "MESSAGE": "정상 처리되었습니다." },
+#       "row": [
+#         { "stationId": "ST-4", "stationName": "102. 망원역 1번출구 앞",
+#           "rackTotCnt": "15", "parkingBikeTotCnt": "7", "shared": "47",
+#           "stationLatitude": "37.55564880", "stationLongitude": "126.91062927" },
+#         ...
+#       ]
+#   }}
+#
+# Field notes:
+#   rackTotCnt        → CAPACITY  (total dock slots; string → integer)
+#   parkingBikeTotCnt → AVAILABLE_BIKES  (bikes ready to rent; string → integer)
+#   AVAILABLE_DOCKS   → computed: pmax(0L, CAPACITY - AVAILABLE_BIKES)
+#   IS_RENTING        → TRUE hardcoded (API has no equivalent field)
+#   LAST_UPDATED      → Sys.time() (API has no per-station last_reported field)
+#
+# NOTE: port 8088 must be outbound-reachable from the host. If blocked, the
+# tryCatch in fetch_gbfs_json returns NULL and EMPTY_STATIONS_SCHEMA is returned.
+#
+# Returns: tibble matching EMPTY_STATIONS_SCHEMA, or EMPTY_STATIONS_SCHEMA on failure
+
+parse_seoul_openapi <- function() {
+
+  # ── Read API key from environment ─────────────────────────────────────────
+  api_key   <- Sys.getenv("SEOUL_API_KEY", "sample")                # "sample" = 5-row demo; real key for production
+  is_sample <- identical(api_key, "sample")                         # sample key has a hard 5-row cap
+
+  # ── Build base URL ────────────────────────────────────────────────────────
+  base_url  <- sprintf(                                              # interpolate key into endpoint template
+    "http://openapi.seoul.go.kr:8088/%s/json/bikeList", api_key
+  )
+
+  # ── Fetch first page ──────────────────────────────────────────────────────
+  end_row   <- if (is_sample) 5L else 1000L                         # sample capped at 5; real key fetches 1,000
+  url1      <- sprintf("%s/1/%d/", base_url, end_row)               # e.g. .../1/5/ or .../1/1000/
+  resp1     <- fetch_gbfs_json(url1)                                # reuse existing HTTP helper with 10s timeout
+
+  if (is.null(resp1) || is.null(resp1$rentBikeStatus)) {            # null = network/HTTP error; missing key = bad structure
+    warning("Seoul OpenAPI: first page fetch failed or unexpected JSON structure")
+    return(EMPTY_STATIONS_SCHEMA)                                   # degrade gracefully — never crash the app
+  }
+
+  status_code_val <- resp1$rentBikeStatus$RESULT$CODE %||% ""       # Seoul-specific result code
+  if (!grepl("INFO-000", status_code_val)) {                        # INFO-000 = success; anything else = API-level error
+    warning(paste("Seoul OpenAPI error:", resp1$rentBikeStatus$RESULT$MESSAGE %||% "unknown"))
+    return(EMPTY_STATIONS_SCHEMA)
+  }
+
+  total_count <- as.integer(                                        # total stations in the system right now
+    resp1$rentBikeStatus$list_total_count %||% 0L
+  )
+  all_rows    <- resp1$rentBikeStatus$row                            # list of station objects from page 1
+
+  # ── Fetch additional pages (real key only) ────────────────────────────────
+  # Documentation max per call: 1,000. System had 1,471 stations in Nov 2018;
+  # paginate until list_total_count is covered, capped at 5,000 rows for safety.
+  if (!is_sample && total_count > 1000L) {
+    page_starts <- seq(1001L, min(total_count, 5000L), by = 1000L)  # e.g. 1001, 2001, 3001 …
+
+    for (page_start in page_starts) {                               # iterate each additional page
+      page_end  <- min(page_start + 999L, total_count)              # don't overshoot the total count
+      url_page  <- sprintf("%s/%d/%d/", base_url, page_start, page_end)
+      resp_page <- fetch_gbfs_json(url_page)                        # fetch with same 10s timeout
+
+      if (!is.null(resp_page) &&
+          !is.null(resp_page$rentBikeStatus$row)) {                 # successful page — append rows
+        all_rows <- c(all_rows, resp_page$rentBikeStatus$row)
+      } else {
+        warning(paste("Seoul OpenAPI: page", page_start, "failed — using partial results"))
+        break                                                        # partial data is better than nothing
+      }
+    }
+  }
+
+  if (length(all_rows) == 0) {                                      # no station objects despite success code
+    warning("Seoul OpenAPI: response succeeded but contained no station rows")
+    return(EMPTY_STATIONS_SCHEMA)
+  }
+
+  # ── Build standardised tibble from row list ───────────────────────────────
+  # All numeric fields from Seoul API arrive as character strings — coerce explicitly.
+  stations_df <- tibble(
+    CITY_ASCII      = "Seoul",                                       # hardcoded — only Seoul uses this parser
+    STATION_ID      = map_chr(all_rows, ~ as.character(.x$stationId       %||% NA_character_)),  # e.g. "ST-4"
+    STATION_NAME    = map_chr(all_rows, ~ as.character(.x$stationName     %||% "Unknown")),      # Korean name string
+    LAT             = map_dbl(all_rows, ~ as.double(.x$stationLatitude    %||% NA_real_)),       # string → double
+    LNG             = map_dbl(all_rows, ~ as.double(.x$stationLongitude   %||% NA_real_)),       # string → double
+    AVAILABLE_BIKES = map_int(all_rows, ~ as.integer(.x$parkingBikeTotCnt %||% 0L)),            # bikes ready to rent
+    CAPACITY        = map_int(all_rows, ~ as.integer(.x$rackTotCnt        %||% 0L)),            # total dock slots
+    IS_RENTING      = TRUE,                                          # no equivalent field in Seoul API; assume TRUE
+    LAST_UPDATED    = as.integer(Sys.time())                         # no per-station timestamp; use fetch time
+  ) %>%
+    mutate(
+      AVAILABLE_DOCKS = pmax(0L, CAPACITY - AVAILABLE_BIKES)        # compute docks; guard against negative values
+    ) %>%
+    filter(!is.na(LAT), !is.na(LNG)) %>%                            # drop any stations missing coordinates
+    select(                                                          # reorder to match EMPTY_STATIONS_SCHEMA exactly
+      CITY_ASCII, STATION_ID, STATION_NAME, LAT, LNG,
+      AVAILABLE_BIKES, AVAILABLE_DOCKS, CAPACITY, IS_RENTING, LAST_UPDATED
+    )
+
+  if (is_sample) {                                                   # surface a clear dev-mode message
+    message(sprintf(
+      "Seoul OpenAPI [sample key]: %d stations returned (5-row cap). Set SEOUL_API_KEY for full city data.",
+      nrow(stations_df)
+    ))
+  } else {
+    message(sprintf(
+      "Seoul OpenAPI: fetched %d of %d stations.",
+      nrow(stations_df), total_count
+    ))
+  }
+
+  stations_df
+}
+
+
+# =============================================================================
+# SECTION 5 — Per-city dispatcher
 # =============================================================================
 
 # parse_gbfs_stations()
@@ -298,9 +436,8 @@ parse_gbfs_stations <- function(city_name) {
     return(EMPTY_STATIONS_SCHEMA)
   }
 
-  if (cfg$type == "skip") {                                        # Seoul or any future key-gated city
-    message(paste("Skipping GBFS for", city_name, "(no API key configured)"))
-    return(EMPTY_STATIONS_SCHEMA)
+  if (cfg$type == "seoul_openapi") {                               # Seoul 따릉이 — reads SEOUL_API_KEY env var
+    return(parse_seoul_openapi())
   }
 
   if (cfg$type == "tfl") {                                         # London TfL BikePoint
@@ -317,7 +454,7 @@ parse_gbfs_stations <- function(city_name) {
 
 
 # =============================================================================
-# SECTION 5 — Main entry point
+# SECTION 6 — Main entry point
 # =============================================================================
 
 # get_all_cities_live_stations()
