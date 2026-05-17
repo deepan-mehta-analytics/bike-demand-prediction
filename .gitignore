@@ -5,8 +5,14 @@
 .DS_Store
 .ipynb_checkpoints/
 
-# Claude Code tooling — local session config, not project artefacts
+# Claude Code tooling — local session config and skill cache, not project artefacts
 .claude/
+.superpowers/
+
+# Shiny runtime logs — generated locally when running shiny::runApp()
+shiny_err.log
+shiny_out.log
+shiny_run.log
 
 # Large model binaries — store locally or in cloud storage, not in git
 *.pkl
