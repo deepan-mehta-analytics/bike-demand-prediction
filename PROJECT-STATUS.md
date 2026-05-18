@@ -12,7 +12,7 @@ Both repos form a single portfolio system. Track them together here.
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
 | **bike_demand_prediction** (this repo) | R Shiny dashboard | v1.3.0 shipped — Feed Health Alerting panel live (colour-coded GBFS feed status, auto-refresh every 5 min) | ✅ Done | `5bc9b09` |
-| **bike-demand-ml-system** | Python FastAPI + ML training | Phase 5 (Vertex AI + MLflow) DONE — v4.0.0 released | ✅ Done | `9eb5b3c` |
+| **bike-demand-ml-system** | Python FastAPI + ML training | v1.4.0 — Paris + Chicago RF models shipped | ✅ Done | `d8ee4e0` |
 
 ### Trained City Models (Python repo)
 
@@ -22,8 +22,8 @@ Both repos form a single portfolio system. Track them together here.
 | London | **228.58** | HOUR (0.71) | London | `artifacts/london/` |
 | NYC | **345.69** | HOUR (0.52) | New York | `artifacts/nyc/` |
 | Washington DC | **97.47** | HOUR (0.61) | Washington DC | `artifacts/dc/` ✅ |
-| Paris | — | — (Seoul fallback) | Paris | Seoul proxy |
-| Chicago | — | — (Seoul fallback) | Chicago | Seoul proxy |
+| Paris | **23.30** | HOUR (0.634) | Paris | `artifacts/paris/` ✅ |
+| Chicago | **202.99** | HOUR + TEMPERATURE (0.39 each) | Chicago | `artifacts/chicago/` ✅ |
 
 ### Next Milestones (Both Repos) — Priority Ordered
 
@@ -34,7 +34,7 @@ Both repos form a single portfolio system. Track them together here.
 | ~~1~~ | bike_demand_prediction | ~~Phase 7F — GCP Streaming Dashboard~~ | ~~v1.2.0~~ | **✅ Shipped** |
 | ~~2~~ | bike-demand-ml-system | ~~Phase 5 — Vertex AI + MLflow~~ | ~~v4.0.0~~ | **✅ Shipped (2026-05-17)** |
 | ~~3~~ | bike_demand_prediction | ~~Feed Health Alerting — sidebar GBFS status panel~~ | ~~v1.3.0~~ | **✅ Shipped (2026-05-17)** |
-| **4** | bike_demand_prediction | Backlog — Paris/Chicago models | v1.4.0 | Data sourcing required |
+| ~~4~~ | bike_demand_prediction | ~~Backlog — Paris/Chicago models~~ | ~~v1.4.0~~ | **✅ Shipped (2026-05-18)** |
 | **5** | Both | Backlog — testthat / pytest | — | None |
 | **6** | bike_demand_prediction | Backlog — Seoul GBFS | — | External API key |
 | **7** | bike_demand_prediction | Backlog — City expansion (SF/Amsterdam) | — | Data sourcing required |
