@@ -11,17 +11,19 @@ Both repos form a single portfolio system. Track them together here.
 
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
-| **bike_demand_prediction** (this repo) | R Shiny dashboard | v1.3.0 shipped — Feed Health Alerting panel live (colour-coded GBFS feed status, auto-refresh every 5 min) | ✅ Done | `5bc9b09` |
-| **bike-demand-ml-system** | Python FastAPI + ML training | v1.4.0 — Paris + Chicago RF models shipped | ✅ Done | `d8ee4e0` |
+| **bike_demand_prediction** (this repo) | R Shiny dashboard | v1.4.0 shipped — Paris + Chicago RF models; testthat bootstrap (Task 1) done; Tasks 2–5 pending | 🔄 In Progress | `717bfd2` |
+| **bike-demand-ml-system** | Python FastAPI + ML training | v4.1.0 — 6-city pytest suite shipped (27 tests, CI Job 7) | ✅ Done | `c3814d9` |
 
 ### Trained City Models (Python repo)
 
+All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% → test), matching `train.py` exactly.
+
 | City | RMSE (bikes/hr) | Top Feature | Dashboard Cities | API Artifact |
 |------|-----------------|-------------|-----------------|--------------|
-| Seoul | **173.21** | TEMPERATURE (0.34) | Seoul | `artifacts/seoul/` |
-| London | **228.58** | HOUR (0.71) | London | `artifacts/london/` |
-| NYC | **345.69** | HOUR (0.52) | New York | `artifacts/nyc/` |
-| Washington DC | **97.47** | HOUR (0.61) | Washington DC | `artifacts/dc/` ✅ |
+| Seoul | **328.84** | TEMPERATURE (0.40) | Seoul | `artifacts/seoul/` |
+| London | **316.56** | HOUR (0.71) | London | `artifacts/london/` |
+| NYC | **470.76** | HOUR (0.52) | New York | `artifacts/nyc/` |
+| Washington DC | **119.31** | HOUR (0.62) | Washington DC | `artifacts/dc/` ✅ |
 | Paris | **23.30** | HOUR (0.634) | Paris | `artifacts/paris/` ✅ |
 | Chicago | **202.99** | HOUR + TEMPERATURE (0.39 each) | Chicago | `artifacts/chicago/` ✅ |
 
@@ -119,8 +121,8 @@ Both repos form a single portfolio system. Track them together here.
 
 ## ⚠️ Known Limitations
 
-* Paris and Chicago have no city-specific RF models — FastAPI falls back to Seoul model (proxy only; less accurate)
-* No unit/integration tests (pytest / testthat) for ETL or model evaluation functions
+* Paris RMSE (23.30) reflects counter MEAN normalisation (~50–500/hr scale), not raw station volume — correct relative to training data
+* No unit/integration tests yet — testthat suite in progress (Priority 5; bootstrap done, 36 tests pending across 3 modules)
 * Seoul GBFS not integrated (requires free API key at data.seoul.go.kr)
 * `USE_FASTAPI` is env-var controlled — no in-app toggle (by design for Docker simplicity)
 * GCP Stream tab requires `GOOGLE_APPLICATION_CREDENTIALS` env var pointing to a GCP service account JSON — not configured by default; tab shows setup instructions when not set
@@ -135,14 +137,15 @@ Both repos form a single portfolio system. Track them together here.
 * bigrquery 1.6.2 + 22 deps added to `renv.lock` via `renv::record()`
 * Commits `9b1fd47` (code) + `1764b19` (renv.lock) pushed to origin/main
 
-### Backlog — Priority 5: Paris/Chicago models (v1.4.0)
-* Train Paris RF model — source Vélib' Métropole open data (Paris OpenData portal)
-* Train Chicago RF model — source Divvy trip data (Chicago Data Portal)
-* Removes Seoul fallback proxy for both cities; improves prediction accuracy
+### ✅ Backlog — Paris/Chicago models (v1.4.0) — SHIPPED 2026-05-18
+* Paris RF — Vélib' Métropole open data (2022–2024, 26,297 rows); RMSE 23.30; `artifacts/paris/`
+* Chicago RF — Divvy quarterly CSVs (2019–2022, 32,720 rows); RMSE 202.99; `artifacts/chicago/`
+* Seoul fallback proxy removed for both cities
 
-### Backlog — Priority 6: Testing
-* pytest / testthat unit tests for ETL and model evaluation functions
-* Engineering rigour; fill-in work between major phases
+### Backlog — Priority 5: testthat suite (in progress)
+* 36-test testthat suite: `test-model-prediction.R` (16), `test-gbfs-client.R` (16), `test-bigquery-client.R` (4)
+* GitHub Actions CI: `r-lib/actions/setup-renv@v2` + `testthat::test_dir()` on every push
+* Bootstrap committed (`717bfd2`); test files (Tasks 2–5) pending
 
 ### Backlog — Priority 7: Seoul GBFS
 * Seoul live station markers (free API key required at data.seoul.go.kr)
@@ -156,10 +159,10 @@ Both repos form a single portfolio system. Track them together here.
 
 ## 🚀 Next Step
 
-**v1.3.0 shipped (2026-05-17) — Feed Health Alerting complete.** The sidebar now shows a colour-coded feed health panel for all 6 cities, auto-refreshing every 5 minutes. GBFS feeds show LIVE / DELAYED / DOWN with minutes-since-last-refresh. Three bugs fixed during browser verification (reactive self-invalidation loop, server crash on missing API key, flex-item height collapse).
+**v1.4.0 shipped (2026-05-18) — Paris + Chicago RF models.** Both cities now have city-specific artifacts; Seoul fallback proxy removed for Paris and Chicago.
 
-**Next priority (v1.4.0):** Train Paris and Chicago RF models to replace the Seoul fallback proxy. Source Vélib' open data (Paris OpenData portal) and Divvy trip data (Chicago Data Portal).
+**Priority 5 in progress — testthat suite (2026-05-18):** Plan committed (`2ff9f3a`); Task 1 bootstrap complete (`717bfd2`) — `testthat` + `mockery` in renv.lock, `tests/testthat.R` entrypoint, `tests/testthat/.gitkeep`. Tasks 2–5 (test files + CI) pending.
 
-*Latest commit `1a7ed0d` — fix(shiny): resolve feed health panel invisible + server crash on missing API key (2026-05-17).*
+*Latest commit `717bfd2` — fix(tests): use rprojroot for safe setwd; guard empty dir; add .gitkeep (2026-05-18).*
 
 Resume with: `"resume bike demand prediction project"`

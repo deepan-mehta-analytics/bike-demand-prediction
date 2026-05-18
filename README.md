@@ -24,7 +24,8 @@ The R pipeline benchmarks six model classes on a chronological 80/20 held-out sp
 ![Status](https://img.shields.io/badge/v1.1-Released-success?style=for-the-badge)
 ![Status](https://img.shields.io/badge/v1.2-Released-success?style=for-the-badge)
 ![Status](https://img.shields.io/badge/v1.3-Released-success?style=for-the-badge)
-![Status](https://img.shields.io/badge/v1.4-In%20Development-blue?style=for-the-badge)
+![Status](https://img.shields.io/badge/v1.4-Released-success?style=for-the-badge)
+![Status](https://img.shields.io/badge/v1.5-In%20Development-blue?style=for-the-badge)
 ![API](https://img.shields.io/badge/API-OpenWeather-blue?style=for-the-badge)
 ![IBM](https://img.shields.io/badge/IBM-Data%20Analytics%20Capstone-054ADA?style=for-the-badge&logo=ibm&logoColor=white)
 
@@ -261,6 +262,10 @@ bike-demand-prediction/
 ├── Dockerfile.shiny                            # Containerises R Shiny app (rocker/shiny:4.4.3 + renv)
 ├── docker-compose.yml                          # Orchestrates Shiny + FastAPI services locally
 │
+├── tests/                                      # ── testthat suite (Priority 5 — in progress)
+│   ├── testthat.R                              # Local run entrypoint: setwd(shiny_app/), test_dir()
+│   └── testthat/                               # Individual test files (test-*.R)
+│
 └── .gitignore
 ```
 
@@ -373,9 +378,13 @@ A professional three-column dashboard built on the **Yeti Bootswatch** theme.
 **Features (v1.3 — shipped):**
 - **Feed Health panel** — colour-coded sidebar panel (LIVE / DELAYED / DOWN) per city; `reactiveTimer` auto-refresh every 5 min; graceful demo fallback when `OPENWEATHER_KEY` not set *(v1.3.0 ✅)*
 
-**In development (v1.4):**
-- **Paris / Chicago RF models** — replace Seoul fallback proxy with city-specific models
+**Features (v1.4 — shipped):**
+- **Paris RF model** — city-specific Vélib' Métropole model (RMSE 23.30 bikes/hr, HOUR 0.63); replaces Seoul fallback proxy *(v1.4.0 ✅)*
+- **Chicago RF model** — city-specific Divvy model (RMSE 202.99 bikes/hr, HOUR + TEMPERATURE 0.39); replaces Seoul fallback proxy *(v1.4.0 ✅)*
+
+**In development (v1.5):**
 - **Seoul live stations** — GBFS integration pending Seoul Open API key registration
+- **testthat suite** — 36-test automated test suite for model_prediction.R, gbfs_client.R, bigquery_client.R
 
 **Demand bands:**
 
@@ -478,13 +487,24 @@ Shiny at `http://localhost:3838/` · FastAPI served from Cloud Run (always up, n
 
 ## 🧪 Tests
 
-No automated test suite is implemented in this capstone project. Correctness is verified through:
+A **testthat suite is in progress** (Priority 5 — see Roadmap). The bootstrap is committed; 36 tests across 3 modules are being added in the current sprint.
 
+**Manual verification (current):**
 - **Chronological 80/20 train/test split** — time-aware holdout prevents data leakage by design
 - **RMSE and R² on held-out test data** — all model numbers reported from the unseen test set
 - **Dashboard manual validation** — Shiny app verified against live OpenWeather responses
 
-> Automated test coverage (pytest / testthat) is listed in the Roadmap below.
+**Automated suite (in progress):**
+```r
+# Run from repo root once tests/testthat/ is populated:
+Rscript tests/testthat.R
+```
+
+| Module | Tests | Covers |
+|--------|-------|--------|
+| `test-model-prediction.R` | 16 | `safe_val`, `calculate_bike_prediction_level`, `load_saved_model`, `predict_bike_demand`, `generate_demo_weather_data` |
+| `test-gbfs-client.R` | 16 | `%\|\|%`, `EMPTY_STATIONS_SCHEMA`, parsers, `get_city_live_stations` (HTTP-mocked via `mockery`) |
+| `test-bigquery-client.R` | 4 | `BQ_CITY_SLUG_TO_NAME` / `BQ_CITY_NAME_TO_SLUG` lookup tables |
 
 ---
 
@@ -512,6 +532,7 @@ The capstone presentation covers the full pipeline from data collection through 
 - **Python RF weaker than R RF** — Python Random Forest achieves R²=0.518 / RMSE=376.7 bikes/hr vs R Track R²=0.730 / RMSE=333.89; gap is attributable to richer feature engineering and original-scale modelling in the R pipeline
 - **Lasso / Elastic Net over-penalised on Python track** — both produce negative R² at α=0.1 on the normalised target, indicating regularisation is too aggressive at that scale
 - **IBM model scored on Track 2 test set** — RMSE 342.60, R² 0.6723; see IBM Deployed Model section for full comparison
+- **Paris RMSE (23.30) uses normalised MEAN scale** — Vélib' source data reports individual station averages (~50–500 bikes/hr), not city-wide summed volume; value is correct relative to the training data distribution
 - **OpenWeather free tier limits** — new API keys take up to 2 hours to activate; rate limits apply at scale
 - **renv library not included** — `renv/library/` is gitignored (platform-specific binaries); run `renv::restore()` to rebuild the local library from `renv.lock`
 
@@ -584,13 +605,18 @@ The capstone presentation covers the full pipeline from data collection through 
 - [x] Demo fallback — `generate_demo_weather_data()` serves synthetic forecast when `OPENWEATHER_KEY` not set; server never crashes
 - [x] Three bug fixes: reactive self-invalidation loop (`isolate()`); server crash on missing API key (`tryCatch`); flex-item height collapse (`overflow:hidden` on inner div)
 
+### ✅ v1.4.0 — Released (2026-05-18)
+
+- [x] Paris RF model — Vélib' Métropole open data (2022–2024, 26,297 rows); RMSE **23.30** bikes/hr; HOUR (0.63) top feature; replaces Seoul fallback
+- [x] Chicago RF model — Divvy quarterly CSVs (2019–2022, 32,720 rows); RMSE **202.99** bikes/hr; HOUR + TEMPERATURE (0.39 each); replaces Seoul fallback
+
 ### 🔮 Backlog — Priority Ordered
 
-- [x] Washington DC added — Capital Bikeshare GBFS v2, RF model RMSE 97.47 bikes/hr
-- [ ] **Priority 5** — Train Paris + Chicago RF models (source Vélib' / Divvy data) to replace Seoul proxy (v1.4.0)
-- [ ] **Priority 6** — pytest / testthat unit tests for ETL and model evaluation functions
-- [ ] **Priority 7** — Seoul GBFS integration (free API key at data.seoul.go.kr)
-- [ ] **Priority 8** — Expand to 8 cities — San Francisco (Ford GoBike) or Amsterdam (OV-fiets)
+- [x] Washington DC added — Capital Bikeshare GBFS v2, RF model RMSE 119.31 bikes/hr
+- [x] ~~**Priority 4**~~ — Train Paris + Chicago RF models (v1.4.0) ✅ Shipped 2026-05-18
+- [ ] **Priority 5** — testthat suite (36 tests: model_prediction.R, gbfs_client.R, bigquery_client.R) + GitHub Actions CI *(in progress — bootstrap complete)*
+- [ ] **Priority 6** — Seoul GBFS integration (free API key at data.seoul.go.kr)
+- [ ] **Priority 7** — Expand to 8 cities — San Francisco (Ford GoBike) or Amsterdam (OV-fiets)
 
 ---
 
