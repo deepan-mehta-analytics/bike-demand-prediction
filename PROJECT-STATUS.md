@@ -11,8 +11,8 @@ Both repos form a single portfolio system. Track them together here.
 
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
-| **bike_demand_prediction** (this repo) | R Shiny dashboard | v1.4.0 shipped — Paris + Chicago RF models; testthat bootstrap (Task 1) done; Tasks 2–5 pending | 🔄 In Progress | `717bfd2` |
-| **bike-demand-ml-system** | Python FastAPI + ML training | v4.1.0 — 6-city pytest suite shipped (27 tests, CI Job 7) | ✅ Done | `c3814d9` |
+| **bike_demand_prediction** (this repo) | R Shiny dashboard | v1.4.0 shipped — Tasks 1+2 done (testthat bootstrap + model tests); Tasks 3–5 pending | 🔄 In Progress | `401062a` |
+| **bike-demand-ml-system** | Python FastAPI + ML training | v4.1.0 — 6-city pytest suite shipped (27 tests, CI Job 7) | ✅ Done | `dfcf872` |
 
 ### Trained City Models (Python repo)
 
@@ -161,8 +161,11 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 
 **v1.4.0 shipped (2026-05-18) — Paris + Chicago RF models.** Both cities now have city-specific artifacts; Seoul fallback proxy removed for Paris and Chicago.
 
-**Priority 5 in progress — testthat suite (2026-05-18):** Plan committed (`2ff9f3a`); Task 1 bootstrap complete (`717bfd2`) — `testthat` + `mockery` in renv.lock, `tests/testthat.R` entrypoint, `tests/testthat/.gitkeep`. Tasks 2–5 (test files + CI) pending.
+**Priority 5 in progress — testthat suite (2026-05-18):** Task 1 bootstrap + Task 2 model tests complete. Tasks 3–5 pending.
+- Task 1 (`717bfd2`): `testthat` + `mockery` in renv.lock; `tests/testthat.R` entrypoint; `tests/testthat/.gitkeep`
+- Task 2 (`401062a`): `tests/testthat/test-model-prediction.R` — 16 tests (safe_val, calculate_bike_prediction_level, load_saved_model, predict_bike_demand, generate_demo_weather_data)
+- Tasks 3–5 pending: test-gbfs-client.R (16 tests), test-bigquery-client.R (4 tests), CI + badge
 
-*Latest commit `717bfd2` — fix(tests): use rprojroot for safe setwd; guard empty dir; add .gitkeep (2026-05-18).*
+*Latest commit `401062a` — test(model): add 16 pure-function tests for model_prediction.R (2026-05-18).*
 
 Resume with: `"resume bike demand prediction project"`
