@@ -8,7 +8,7 @@ This project delivers a full-stack predictive analytics system for bike-sharing 
 
 The R pipeline benchmarks six model classes on a chronological 80/20 held-out split, achieving a Random Forest with R²=0.730 (RMSE 333.89 bikes/hr) — a 39% improvement over the baseline linear model. The Bikecast Shiny dashboard provides live 24-hour demand forecasts for six global cities rendered on an interactive Leaflet map, with city drill-down showing live GBFS station availability markers, demand-band filtering, and expand-to-modal charts.
 
-**v1.3 is shipped.** Phase 7 extended the dashboard into two real end-user tools: an **Operator tab** (fleet rebalancing alerts, demand vs. station capacity) and a **Rider tab** (live availability score, best-time recommendation, natural-language summary). The prediction backend is a Python FastAPI inference service (RF RMSE 173 bikes/hr) live on **GCP Cloud Run**; Docker Compose runs the full stack locally. **v1.2 adds a GCP Stream tab** — `bigrquery` queries `bike_demand.station_snapshots` in BigQuery directly from the Shiny app, displaying live 5-minute windowed avg/min/max bike availability for NYC, DC, London, and Chicago fed by the Apache Beam / Dataflow streaming pipeline (Python repo v3.0.0). **v1.3 adds a real-time Feed Health panel** — colour-coded GBFS feed status (LIVE / DELAYED / DOWN) per city in the sidebar, auto-refreshing every 5 minutes with graceful demo fallback when the OpenWeather API key is not set.
+**v1.4 is shipped.** Phase 7 extended the dashboard into two real end-user tools: an **Operator tab** (fleet rebalancing alerts, demand vs. station capacity) and a **Rider tab** (live availability score, best-time recommendation, natural-language summary). The prediction backend is a Python FastAPI inference service with **per-city RF models for all six cities**, live on **GCP Cloud Run**; Docker Compose runs the full stack locally. **v1.2 adds a GCP Stream tab** — `bigrquery` queries `bike_demand.station_snapshots` in BigQuery directly from the Shiny app, displaying live 5-minute windowed avg/min/max bike availability for NYC, DC, London, and Chicago fed by the Apache Beam / Dataflow streaming pipeline (Python repo v3.0.0). **v1.3 adds a real-time Feed Health panel** — colour-coded GBFS feed status (LIVE / DELAYED / DOWN) per city in the sidebar, auto-refreshing every 5 minutes with graceful demo fallback when the OpenWeather API key is not set. **v1.4 adds city-specific RF models for Paris** (Vélib' Métropole, RMSE 23.30 bikes/hr) **and Chicago** (Divvy Bikes, RMSE 202.99 bikes/hr), replacing the Seoul fallback proxy for both cities.
 
 ### End-to-end ML pipeline: raw Seoul data → six competing models → live global demand forecast
 
@@ -53,7 +53,7 @@ The R pipeline benchmarks six model classes on a chronological 80/20 held-out sp
 | API integration | httr (R) · requests (Py) | OpenWeather forecast fetch + GBFS live station feeds |
 | Live station data | GBFS v2 (NYC / Paris / Chicago) · TfL BikePoint API (London) | Real-time available bikes per station |
 | Dashboard | R Shiny, shinythemes (Yeti), shinyjs | Live Bikecast 24-hr demand web app |
-| ML inference service *(v1.1)* | Python FastAPI + scikit-learn RF | `/predict` endpoint; RMSE 173 bikes/hr |
+| ML inference service *(v1.1)* | Python FastAPI + scikit-learn RF | `/predict` endpoint; per-city RF models (6 cities) |
 | Streaming pipeline *(v1.2)* | GCP Pub/Sub · Apache Beam / Dataflow · BigQuery · bigrquery | GBFS → 5-min windowed station aggregations → Shiny GCP Stream tab |
 | Containerisation *(v1.1)* | Docker · Docker Compose · GCP Cloud Run | Reproducible local + cloud deployment |
 | Development | RStudio, JupyterLab | Notebook authoring and Shiny development |
@@ -367,7 +367,7 @@ A professional three-column dashboard built on the **Yeti Bootswatch** theme.
 - **Live GBFS station markers** — city drill-down shows individual stations coloured by current available bike count (green ≥ 5 / yellow 1–4 / red 0); popups show station name, bikes available, free docks, and capacity *(Phase 7B)*
 
 **Features (v1.1 — shipped):**
-- **FastAPI prediction engine** — RF model (RMSE 173 bikes/hr) replaces linear model.csv; 2× accuracy improvement; `USE_FASTAPI` env var switches engines *(Phase 7C ✅)*
+- **FastAPI prediction engine** — per-city RF models replace the linear model.csv fallback; `USE_FASTAPI` env var switches engines *(Phase 7C ✅)*
 - **Operator tab (UC1)** — fleet rebalancing alerts, demand vs. station capacity heatmap, CSV export of 24-hr forecast *(Phase 7D ✅)*
 - **Rider tab (UC2)** — demand score (Low / Medium / High) for next 3 hours, best-time-to-ride recommendation, natural-language availability summary *(Phase 7E ✅)*
 - **Docker Compose deployment** — `docker compose up` runs the full Shiny + FastAPI stack locally *(Phase 7H ✅)*
@@ -487,7 +487,7 @@ Shiny at `http://localhost:3838/` · FastAPI served from Cloud Run (always up, n
 
 ## 🧪 Tests
 
-A **testthat suite is in progress** (Priority 5 — see Roadmap). The bootstrap is committed; 36 tests across 3 modules are being added in the current sprint.
+A **testthat suite is in progress** (Priority 5 — see Roadmap). Tasks 1 and 2 are committed; Tasks 3–5 pending.
 
 **Manual verification (current):**
 - **Chronological 80/20 train/test split** — time-aware holdout prevents data leakage by design
@@ -496,15 +496,15 @@ A **testthat suite is in progress** (Priority 5 — see Roadmap). The bootstrap 
 
 **Automated suite (in progress):**
 ```r
-# Run from repo root once tests/testthat/ is populated:
+# Run from repo root:
 Rscript tests/testthat.R
 ```
 
-| Module | Tests | Covers |
-|--------|-------|--------|
-| `test-model-prediction.R` | 16 | `safe_val`, `calculate_bike_prediction_level`, `load_saved_model`, `predict_bike_demand`, `generate_demo_weather_data` |
-| `test-gbfs-client.R` | 16 | `%\|\|%`, `EMPTY_STATIONS_SCHEMA`, parsers, `get_city_live_stations` (HTTP-mocked via `mockery`) |
-| `test-bigquery-client.R` | 4 | `BQ_CITY_SLUG_TO_NAME` / `BQ_CITY_NAME_TO_SLUG` lookup tables |
+| Module | Tests | Status | Covers |
+|--------|-------|--------|--------|
+| `test-model-prediction.R` | 16 | ✅ Committed | `safe_val`, `calculate_bike_prediction_level`, `load_saved_model`, `predict_bike_demand`, `generate_demo_weather_data` |
+| `test-gbfs-client.R` | 16 | ⏳ Pending | `%\|\|%`, `EMPTY_STATIONS_SCHEMA`, parsers, `get_city_live_stations` (HTTP-mocked via `mockery`) |
+| `test-bigquery-client.R` | 4 | ⏳ Pending | `BQ_CITY_SLUG_TO_NAME` / `BQ_CITY_NAME_TO_SLUG` lookup tables |
 
 ---
 
@@ -614,7 +614,7 @@ The capstone presentation covers the full pipeline from data collection through 
 
 - [x] Washington DC added — Capital Bikeshare GBFS v2, RF model RMSE 119.31 bikes/hr
 - [x] ~~**Priority 4**~~ — Train Paris + Chicago RF models (v1.4.0) ✅ Shipped 2026-05-18
-- [ ] **Priority 5** — testthat suite (36 tests: model_prediction.R, gbfs_client.R, bigquery_client.R) + GitHub Actions CI *(in progress — bootstrap complete)*
+- [ ] **Priority 5** — testthat suite (36 tests: model_prediction.R, gbfs_client.R, bigquery_client.R) + GitHub Actions CI *(in progress — Tasks 1+2 complete; Tasks 3–5 pending)*
 - [ ] **Priority 6** — Seoul GBFS integration (free API key at data.seoul.go.kr)
 - [ ] **Priority 7** — Expand to 8 cities — San Francisco (Ford GoBike) or Amsterdam (OV-fiets)
 
