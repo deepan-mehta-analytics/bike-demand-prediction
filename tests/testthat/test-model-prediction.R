@@ -1,0 +1,132 @@
+# tests/testthat/test-model-prediction.R
+# Working directory when run: shiny_app/
+# Source resolves to shiny_app/model_prediction.R
+library(testthat)                                              # test framework
+suppressMessages(source("model_prediction.R"))                 # load module under test; suppress package load msgs
+
+
+# ── safe_val() ───────────────────────────────────────────────────────────────
+
+test_that("safe_val: NULL returns NA_real_ by default", {
+  expect_identical(safe_val(NULL), NA_real_)                  # default = NA_real_ when input is NULL
+})
+
+test_that("safe_val: NULL with custom default returns that default", {
+  expect_identical(safe_val(NULL, default = 0.0), 0.0)        # custom default honoured for NULL
+})
+
+test_that("safe_val: non-NULL value passes through unchanged", {
+  expect_identical(safe_val(15.5), 15.5)                      # non-NULL bypasses default entirely
+})
+
+
+# ── calculate_bike_prediction_level() ────────────────────────────────────────
+
+test_that("calculate_bike_prediction_level: 0 is small", {
+  expect_equal(calculate_bike_prediction_level(0), "small")   # floor boundary
+})
+
+test_that("calculate_bike_prediction_level: 1000 is small (inclusive upper bound)", {
+  expect_equal(calculate_bike_prediction_level(1000), "small") # inclusive: 0-1000 = small
+})
+
+test_that("calculate_bike_prediction_level: 1001 is medium", {
+  expect_equal(calculate_bike_prediction_level(1001), "medium") # first medium value
+})
+
+test_that("calculate_bike_prediction_level: 2999 is medium", {
+  expect_equal(calculate_bike_prediction_level(2999), "medium") # last medium value
+})
+
+test_that("calculate_bike_prediction_level: 3000 is large", {
+  expect_equal(calculate_bike_prediction_level(3000), "large")  # first large value
+})
+
+test_that("calculate_bike_prediction_level: vectorised input returns correct-length result", {
+  result <- calculate_bike_prediction_level(c(0, 1500, 5000))  # one from each bucket
+  expect_equal(result, c("small", "medium", "large"))           # preserves order and length
+})
+
+
+# ── load_saved_model() ────────────────────────────────────────────────────────
+
+test_that("load_saved_model: returns a named numeric vector", {
+  model <- load_saved_model("model.csv")                       # reads shiny_app/model.csv
+  expect_true(is.numeric(model))                               # coefficients are numeric
+  expect_false(is.null(names(model)))                          # names must be present for lookup
+})
+
+test_that("load_saved_model: names include all keys used by predict_bike_demand", {
+  model <- load_saved_model("model.csv")                       # reads shiny_app/model.csv
+  required_keys <- c(
+    "Intercept",                                               # baseline term
+    as.character(0:23),                                        # 24 hour-of-day keys
+    "SPRING", "SUMMER", "AUTUMN", "WINTER"                    # 4 season keys
+  )
+  missing <- setdiff(required_keys, names(model))              # keys present in spec but absent from CSV
+  expect_equal(
+    length(missing), 0L,
+    label = paste("Missing model keys:", paste(missing, collapse = ", "))
+  )
+})
+
+
+# ── predict_bike_demand() ─────────────────────────────────────────────────────
+
+test_that("predict_bike_demand: returns integer vector same length as input", {
+  result <- predict_bike_demand(
+    TEMPERATURE = c(15.0, 20.0),                               # two rows of input
+    HUMIDITY    = c(60L,  55L),
+    WIND_SPEED  = c(3.0,  4.0),
+    VISIBILITY  = c(10000L, 9000L),
+    SEASONS     = c("SPRING", "SUMMER"),
+    HOURS       = c(8L, 12L)
+  )
+  expect_true(is.integer(result))                              # pmax(as.integer(...)) guarantees integer
+  expect_length(result, 2L)                                    # one prediction per input row
+})
+
+test_that("predict_bike_demand: all values are non-negative", {
+  result <- predict_bike_demand(
+    TEMPERATURE = -10.0,                                       # cold conditions may produce low raw prediction
+    HUMIDITY    = 90L,
+    WIND_SPEED  = 10.0,
+    VISIBILITY  = 500L,
+    SEASONS     = "WINTER",
+    HOURS       = 3L                                           # 3 AM - very low demand
+  )
+  expect_true(all(result >= 0L, na.rm = TRUE))                 # pmax floor must prevent negatives
+})
+
+test_that("predict_bike_demand: smoke test -- peak spring morning is a positive integer", {
+  result <- predict_bike_demand(
+    TEMPERATURE = 15.0,
+    HUMIDITY    = 60L,
+    WIND_SPEED  = 3.0,
+    VISIBILITY  = 10000L,
+    SEASONS     = "SPRING",
+    HOURS       = 8L                                           # morning commute peak
+  )
+  expect_true(is.integer(result) && result > 0L && !is.na(result))  # must be a real positive prediction
+})
+
+
+# ── generate_demo_weather_data() ──────────────────────────────────────────────
+
+test_that("generate_demo_weather_data: returns exactly 48 rows", {
+  result <- suppressMessages(generate_demo_weather_data())     # 6 cities x 8 forecast slots
+  expect_equal(nrow(result), 48L)
+})
+
+test_that("generate_demo_weather_data: schema and prediction values are valid", {
+  result <- suppressMessages(generate_demo_weather_data())
+  expected_cols <- c(                                          # columns server.R expects
+    "CITY_ASCII", "LNG", "LAT",
+    "TEMPERATURE", "HUMIDITY",
+    "BIKE_PREDICTION", "BIKE_PREDICTION_LEVEL",
+    "LABEL", "DETAILED_LABEL", "FORECASTDATETIME"
+  )
+  expect_equal(names(result), expected_cols)                   # schema must match server.R contract
+  expect_true(all(result$BIKE_PREDICTION >= 0L))               # no negative predictions
+  expect_true(all(result$BIKE_PREDICTION_LEVEL %in% c("small", "medium", "large")))  # valid levels only
+})
