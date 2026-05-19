@@ -56,6 +56,7 @@ The R pipeline benchmarks six model classes on a chronological 80/20 held-out sp
 | ML inference service *(v1.1)* | Python FastAPI + scikit-learn RF | `/predict` endpoint; per-city RF models (6 cities) |
 | Streaming pipeline *(v1.2)* | GCP Pub/Sub · Apache Beam / Dataflow · BigQuery · bigrquery | GBFS → 5-min windowed station aggregations → Shiny GCP Stream tab |
 | Containerisation *(v1.1)* | Docker · Docker Compose · GCP Cloud Run | Reproducible local + cloud deployment |
+| Testing & CI *(v1.5)* | testthat 3.x · mockery · GitHub Actions | 62-assertion suite across 3 modules (HTTP stubbed via `mockery`); 4-job CI gate on every push and PR |
 | Development | RStudio, JupyterLab | Notebook authoring and Shiny development |
 
 ---
@@ -264,7 +265,11 @@ bike-demand-prediction/
 │
 ├── tests/                                      # ── testthat suite (v1.5 — 36 tests, 62 assertions, CI-enforced)
 │   ├── testthat.R                              # Local run entrypoint: setwd(shiny_app/), test_dir()
-│   └── testthat/                               # Individual test files (test-*.R)
+│   └── testthat/
+│       ├── helper-workdir.R                    # Sets cwd to shiny_app/ via rprojroot before each test file
+│       ├── test-model-prediction.R             # 16 test_that blocks (20 assertions) — model.csv linear regressor
+│       ├── test-gbfs-client.R                  # 16 test_that blocks (38 assertions) — GBFS/TfL parsers; mockery-stubbed HTTP
+│       └── test-bigquery-client.R              # 4 test_that blocks (4 assertions) — BQ city slug lookup tables
 │
 └── .gitignore
 ```
@@ -279,7 +284,7 @@ Two model pipelines exist in this project, corresponding to each stage of the pr
 *Track 2 · `notebooks/R/08_model_selection_R.ipynb` · `results/models/my_trained_model.rds`*
 
 Trained on the Seoul Bike Sharing dataset using a chronological 80/20 train-test split
-(200 estimators, full feature set, seed 123). Five model classes evaluated on held-out test data.
+(200 estimators, full feature set, seed 123). Six model classes evaluated on held-out test data.
 
 | Model | Specification | Test RMSE | Test R² |
 |-------|--------------|-----------|---------|
