@@ -1,7 +1,7 @@
 # tests/testthat/test-model-prediction.R
-# Working directory when run: shiny_app/
-# Source resolves to shiny_app/model_prediction.R
+# Working directory: resolved to shiny_app/ via rprojroot before source() is called.
 library(testthat)                                              # test framework
+setwd(file.path(rprojroot::find_root(rprojroot::is_git_root), "shiny_app"))  # absolute path — works from any invocation dir
 suppressMessages(source("model_prediction.R"))                 # load module under test; suppress package load msgs
 
 

@@ -333,7 +333,7 @@ predict_bike_demand <- function(TEMPERATURE, HUMIDITY, WIND_SPEED, VISIBILITY, S
   #   - na.rm=TRUE means any NA value is treated as 0 rather than crashing.
   regression_terms <- pmax(
     as.integer(weather_terms + season_terms + hour_terms),
-    0,           # Floor value — predictions cannot go below zero
+    0L,          # Floor value — 0L preserves integer type; 0 (double) would coerce result to numeric
     na.rm = TRUE # Treat NA predictions as 0 instead of propagating the error
   )
   
