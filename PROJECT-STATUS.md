@@ -11,7 +11,7 @@ Both repos form a single portfolio system. Track them together here.
 
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
-| **bike_demand_prediction** (this repo) | R Shiny dashboard | v1.5.0 shipped — testthat suite (36 tests / 62 assertions) + GitHub Actions CI | ✅ Done | `edd97e3` |
+| **bike_demand_prediction** (this repo) | R Shiny dashboard | v1.5.0 shipped — testthat suite (36 tests / 62 assertions) + GitHub Actions CI; README polished | ✅ Done | `9da4a6d` |
 | **bike-demand-ml-system** | Python FastAPI + ML training | v4.1.0 — 6-city pytest suite shipped (27 tests, CI Job 7) | ✅ Done | `dfcf872` |
 
 ### Trained City Models (Python repo)
@@ -168,8 +168,10 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 - Task 4 (`cce5be9`): `tests/testthat/test-bigquery-client.R` (4 test_that / 4 assertions)
 - Task 5 (`edd97e3`): `testthat` job appended to `ci.yml`; CI run 26079707740 green on all 4 jobs
 
-*Latest commit `edd97e3` — ci: add GitHub Actions testthat job to ci.yml (2026-05-19).*
+*Latest commit `9da4a6d` — docs(readme): polish staleness after v1.5 testthat ship (2026-05-19). Earlier same-day: `edd97e3` (testthat CI job), `c712d67` (CI refactor — R_VERSION env + cp guard), v1.5.0 release tag.*
 
-**Next move:** v1.5.0 GitHub release covering the testthat suite milestone, then decide between Priority 6 (Seoul GBFS key registration) or Phase 8 (shinytest2 for server.R / ui.R reactives).
+**Next move (Python-side, downstream impact here):** Seoul training-data refresh in the ML repo — v4.2.0 replacing stale UCI 2017-2018 data with OA-15182 (Seoul 따릉이 rental history, no API key). Full dataset facts in the ML repo's project memory at `project_seoul_dataset.md`. Shiny impact is README copy only: Quick Summary + Project Overview + Business Problem sections currently reference "8,760 hourly observations (Jan 2017 – Nov 2018)" — get rewritten as part of Sprint 3 cross-repo doc sync.
+
+**Shiny-native alternatives:** Phase 8 / v1.7 — `shinytest2` browser harness for `server.R` / `ui.R` reactives (new R toolchain, multi-session); Priority 6 — Seoul **live station** feed upgrade (5-station `sample` key → full city via registered API key; pure config change once user has the key — separate concern from the OA-15182 training refresh, do not conflate).
 
 Resume with: `"resume bike demand prediction project"`
