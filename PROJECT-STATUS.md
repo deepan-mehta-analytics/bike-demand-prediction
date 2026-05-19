@@ -11,7 +11,7 @@ Both repos form a single portfolio system. Track them together here.
 
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
-| **bike_demand_prediction** (this repo) | R Shiny dashboard | v1.4.0 shipped — Tasks 1+2 done (testthat bootstrap + model tests); Tasks 3–5 pending | 🔄 In Progress | `401062a` |
+| **bike_demand_prediction** (this repo) | R Shiny dashboard | v1.5.0 shipped — testthat suite (36 tests / 62 assertions) + GitHub Actions CI | ✅ Done | `edd97e3` |
 | **bike-demand-ml-system** | Python FastAPI + ML training | v4.1.0 — 6-city pytest suite shipped (27 tests, CI Job 7) | ✅ Done | `dfcf872` |
 
 ### Trained City Models (Python repo)
@@ -37,7 +37,7 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 | ~~2~~ | bike-demand-ml-system | ~~Phase 5 — Vertex AI + MLflow~~ | ~~v4.0.0~~ | **✅ Shipped (2026-05-17)** |
 | ~~3~~ | bike_demand_prediction | ~~Feed Health Alerting — sidebar GBFS status panel~~ | ~~v1.3.0~~ | **✅ Shipped (2026-05-17)** |
 | ~~4~~ | bike_demand_prediction | ~~Backlog — Paris/Chicago models~~ | ~~v1.4.0~~ | **✅ Shipped (2026-05-18)** |
-| **5** | Both | Backlog — testthat / pytest | — | None |
+| ~~5~~ | bike_demand_prediction | ~~Backlog — testthat suite + CI~~ | ~~v1.5.0~~ | **✅ Shipped (2026-05-19)** |
 | **6** | bike_demand_prediction | Backlog — Seoul GBFS | — | External API key |
 | **7** | bike_demand_prediction | Backlog — City expansion (SF/Amsterdam) | — | Data sourcing required |
 
@@ -122,7 +122,7 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 ## ⚠️ Known Limitations
 
 * Paris RMSE (23.30) reflects counter MEAN normalisation (~50–500/hr scale), not raw station volume — correct relative to training data
-* No unit/integration tests yet — testthat suite in progress (Priority 5; bootstrap done, 36 tests pending across 3 modules)
+* Reactive logic in `server.R` and `ui.R` not yet covered — would require `shinytest2` browser harness (out of scope for v1.5; candidate for a future phase)
 * Seoul GBFS not integrated (requires free API key at data.seoul.go.kr)
 * `USE_FASTAPI` is env-var controlled — no in-app toggle (by design for Docker simplicity)
 * GCP Stream tab requires `GOOGLE_APPLICATION_CREDENTIALS` env var pointing to a GCP service account JSON — not configured by default; tab shows setup instructions when not set
@@ -142,10 +142,11 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 * Chicago RF — Divvy quarterly CSVs (2019–2022, 32,720 rows); RMSE 202.99; `artifacts/chicago/`
 * Seoul fallback proxy removed for both cities
 
-### Backlog — Priority 5: testthat suite (in progress)
-* 36-test testthat suite: `test-model-prediction.R` (16), `test-gbfs-client.R` (16), `test-bigquery-client.R` (4)
-* GitHub Actions CI: `r-lib/actions/setup-renv@v2` + `testthat::test_dir()` on every push
-* Bootstrap committed (`717bfd2`); test files (Tasks 2–5) pending
+### v1.5.0 — testthat suite + CI (shipped 2026-05-19)
+* 36-test / 62-assertion testthat suite: `test-model-prediction.R` (20 assertions), `test-gbfs-client.R` (38), `test-bigquery-client.R` (4)
+* HTTP layer fully stubbed via `mockery::stub()` — no network, no cassettes
+* GitHub Actions `testthat` job (4th job in `ci.yml`) — mirrors `r-check`'s renv-restore pattern, shares its renv cache key
+* Cold-cache run: ~5 min; warm-cache run: ~1 min (62 assertions in ~2 s once renv is restored)
 
 ### Backlog — Priority 7: Seoul GBFS
 * Seoul live station markers (free API key required at data.seoul.go.kr)
@@ -159,13 +160,16 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 
 ## 🚀 Next Step
 
-**v1.4.0 shipped (2026-05-18) — Paris + Chicago RF models.** Both cities now have city-specific artifacts; Seoul fallback proxy removed for Paris and Chicago.
+**v1.5.0 shipped (2026-05-19) — testthat suite + CI.** Three test files (62 assertions across 36 `test_that` blocks), HTTP-mocked via `mockery`, enforced by a fourth GitHub Actions CI job that mirrors `r-check`'s renv pattern. All five acceptance criteria in the parent spec verified.
 
-**Priority 5 in progress — testthat suite (2026-05-18):** Task 1 bootstrap + Task 2 model tests complete. Tasks 3–5 pending.
-- Task 1 (`717bfd2`): `testthat` + `mockery` in renv.lock; `tests/testthat.R` entrypoint; `tests/testthat/.gitkeep`
-- Task 2 (`401062a`): `tests/testthat/test-model-prediction.R` — 16 tests (safe_val, calculate_bike_prediction_level, load_saved_model, predict_bike_demand, generate_demo_weather_data)
-- Tasks 3–5 pending: test-gbfs-client.R (16 tests), test-bigquery-client.R (4 tests), CI + badge
+- Task 1 (`717bfd2`): `testthat` + `mockery` in renv.lock; `tests/testthat.R` entrypoint
+- Task 2 (`401062a`): `tests/testthat/test-model-prediction.R` (16 test_that / 20 assertions)
+- Task 3 (`7189030`): `tests/testthat/test-gbfs-client.R` (16 test_that / 38 assertions); helper-workdir.R; rprojroot setwd pattern; `pmax 0→0L` fix in model_prediction.R
+- Task 4 (`cce5be9`): `tests/testthat/test-bigquery-client.R` (4 test_that / 4 assertions)
+- Task 5 (`edd97e3`): `testthat` job appended to `ci.yml`; CI run 26079707740 green on all 4 jobs
 
-*Latest commit `401062a` — test(model): add 16 pure-function tests for model_prediction.R (2026-05-18).*
+*Latest commit `edd97e3` — ci: add GitHub Actions testthat job to ci.yml (2026-05-19).*
+
+**Next move:** v1.5.0 GitHub release covering the testthat suite milestone, then decide between Priority 6 (Seoul GBFS key registration) or Phase 8 (shinytest2 for server.R / ui.R reactives).
 
 Resume with: `"resume bike demand prediction project"`
