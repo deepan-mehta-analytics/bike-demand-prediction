@@ -163,3 +163,76 @@ jobs:
           push: false                                    # smoke test only — do not push to any registry
           cache-from: type=gha                           # restore image layers from GitHub Actions cache
           cache-to: type=gha,mode=max                    # write all layers back to GHA cache after build
+
+  # ── Job 4: testthat unit suite ───────────────────────────────────────────────
+  # Runs the 62-assertion testthat suite (20 model + 38 gbfs + 4 bigquery).
+  # Mirrors the r-check renv restore pattern (unset RENV_CONFIG_REPOS_OVERRIDE,
+  # manual options(repos=...)) and shares the same renv cache key so whichever
+  # of {r-check, testthat} runs second pulls from a warm cache.
+  # Copies data/processed/model.csv to shiny_app/model.csv before running tests
+  # because shiny_app/model.csv is gitignored (Dockerfile.shiny copies it at
+  # image build time; the CI run does the equivalent copy for the test job).
+  testthat:
+    name: R — testthat unit suite                         # label shown in the Actions UI
+    runs-on: ubuntu-latest                                # GitHub-hosted Ubuntu 24.04 runner
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4                         # clone repo at current ref
+
+      - name: Install system dependencies
+        uses: awalsh128/cache-apt-pkgs-action@latest     # caches .deb files in GHA cache; dpkg-installs on hit
+        with:
+          packages: >-
+            libcurl4-openssl-dev libssl-dev libxml2-dev
+            libfontconfig1-dev libharfbuzz-dev libfribidi-dev libfreetype6-dev
+            libpng-dev libtiff-dev libjpeg-dev
+            libudunits2-dev libgdal-dev libgeos-dev libproj-dev cmake gdal-bin
+            libx11-dev pandoc
+          version: 1.0                                   # user-defined cache-bust key; matches r-check
+
+      - name: Set up R 4.4.3
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.4.3"                             # pin to match renv.lock R version
+          use-public-rspm: true                          # use Posit PPM for pre-built Ubuntu binaries
+
+      - name: Cache renv packages
+        uses: actions/cache@v4                           # standard GitHub cache action
+        with:
+          path: ~/.cache/R/renv                          # renv's global package cache directory
+          key: ${{ runner.os }}-R-4.4.3-renv-3-${{ hashFiles('renv.lock') }}   # same key as r-check — shared cache
+          restore-keys: ${{ runner.os }}-R-4.4.3-renv-3-                        # partial match for cache hit
+
+      - name: Restore renv library
+        shell: bash
+        run: |
+          # setup-r sets RENV_CONFIG_REPOS_OVERRIDE=PPM-only in the shell environment;
+          # unset it here in bash before Rscript starts — renv reads this env var during
+          # source('renv/activate.R'), so clearing it inside R (Sys.unsetenv) is too late.
+          unset RENV_CONFIG_REPOS_OVERRIDE                                   # clear PPM-only flag before R starts
+          Rscript -e "
+          source('renv/activate.R')                                         # bootstrap renv from lockfile version
+          options(repos = c(                                                 # dual-repo strategy:
+            PPM  = 'https://packagemanager.posit.co/cran/__linux__/noble/latest',  # PPM first — fast Ubuntu binaries
+            CRAN = 'https://cloud.r-project.org'                            # CRAN fallback — source for PPM gaps
+          ))
+          renv::restore()                                                    # restore all packages from renv.lock
+          "
+
+      - name: Copy model.csv into shiny_app/
+        shell: bash
+        run: |
+          # shiny_app/model.csv is gitignored (Dockerfile.shiny COPYs it at image build time).
+          # The testthat suite sources model_prediction.R which reads model.csv via the
+          # relative path 'model.csv' from cwd=shiny_app/ — so we materialise it here.
+          cp data/processed/model.csv shiny_app/model.csv  # bridge the gitignore for CI
+          ls -la shiny_app/model.csv                       # verify copy succeeded
+
+      - name: Run testthat suite
+        shell: bash
+        run: |
+          # tests/testthat.R sets cwd to shiny_app/ via rprojroot and runs test_dir().
+          # CI=true is auto-set by GitHub Actions → stop_on_failure=FALSE → all failures
+          # reported in one run instead of fast-failing on the first.
+          Rscript tests/testthat.R                         # full suite: 62 assertions expected
