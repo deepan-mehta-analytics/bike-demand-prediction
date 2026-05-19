@@ -18,6 +18,12 @@ on:
   pull_request:
     branches: [ main ]                                     # run on every PR targeting main
 
+# Workflow-level env: single source of truth for the R version pinned to renv.lock.
+# Referenced by r-check and testthat in setup-r r-version + the shared renv cache key,
+# so bumping R version touches one line instead of six.
+env:
+  R_VERSION: "4.4.3"                                       # must match renv.lock; used by r-check and testthat
+
 jobs:
 
   # ── Job 1: Python dependency install + import smoke test ─────────────────────
@@ -77,18 +83,18 @@ jobs:
             libx11-dev pandoc
           version: 1.0                                   # user-defined cache-bust key; increment to force refresh
 
-      - name: Set up R 4.4.3
+      - name: Set up R ${{ env.R_VERSION }}
         uses: r-lib/actions/setup-r@v2
         with:
-          r-version: "4.4.3"                             # pin to match renv.lock R version
+          r-version: ${{ env.R_VERSION }}                # workflow-level env; matches renv.lock R version
           use-public-rspm: true                          # use Posit PPM for pre-built Ubuntu binaries
 
       - name: Cache renv packages
         uses: actions/cache@v4                           # standard GitHub cache action
         with:
           path: ~/.cache/R/renv                          # renv's global package cache directory
-          key: ${{ runner.os }}-R-4.4.3-renv-3-${{ hashFiles('renv.lock') }}   # invalidate on lockfile change
-          restore-keys: ${{ runner.os }}-R-4.4.3-renv-3-                        # partial match for cache hit
+          key: ${{ runner.os }}-R-${{ env.R_VERSION }}-renv-3-${{ hashFiles('renv.lock') }}   # invalidate on lockfile change
+          restore-keys: ${{ runner.os }}-R-${{ env.R_VERSION }}-renv-3-                        # partial match for cache hit
 
       - name: Restore renv library
         shell: bash
@@ -191,18 +197,18 @@ jobs:
             libx11-dev pandoc
           version: 1.0                                   # user-defined cache-bust key; matches r-check
 
-      - name: Set up R 4.4.3
+      - name: Set up R ${{ env.R_VERSION }}
         uses: r-lib/actions/setup-r@v2
         with:
-          r-version: "4.4.3"                             # pin to match renv.lock R version
+          r-version: ${{ env.R_VERSION }}                # workflow-level env; matches renv.lock R version
           use-public-rspm: true                          # use Posit PPM for pre-built Ubuntu binaries
 
       - name: Cache renv packages
         uses: actions/cache@v4                           # standard GitHub cache action
         with:
           path: ~/.cache/R/renv                          # renv's global package cache directory
-          key: ${{ runner.os }}-R-4.4.3-renv-3-${{ hashFiles('renv.lock') }}   # same key as r-check — shared cache
-          restore-keys: ${{ runner.os }}-R-4.4.3-renv-3-                        # partial match for cache hit
+          key: ${{ runner.os }}-R-${{ env.R_VERSION }}-renv-3-${{ hashFiles('renv.lock') }}   # same key as r-check — shared cache
+          restore-keys: ${{ runner.os }}-R-${{ env.R_VERSION }}-renv-3-                        # partial match for cache hit
 
       - name: Restore renv library
         shell: bash
@@ -226,8 +232,14 @@ jobs:
           # shiny_app/model.csv is gitignored (Dockerfile.shiny COPYs it at image build time).
           # The testthat suite sources model_prediction.R which reads model.csv via the
           # relative path 'model.csv' from cwd=shiny_app/ — so we materialise it here.
+          # Guard surfaces a clear error if the source file is missing/empty so the
+          # failure points at the data layer rather than looking like a test bug.
+          if [ ! -s data/processed/model.csv ]; then
+            echo "::error file=data/processed/model.csv::source file missing or empty — cannot run testthat suite"
+            exit 1
+          fi
           cp data/processed/model.csv shiny_app/model.csv  # bridge the gitignore for CI
-          ls -la shiny_app/model.csv                       # verify copy succeeded
+          ls -la shiny_app/model.csv                       # log file size for debugging
 
       - name: Run testthat suite
         shell: bash
