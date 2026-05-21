@@ -12,7 +12,7 @@ Both repos form a single portfolio system. Track them together here.
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
 | **bike_demand_prediction** (this repo) | R Shiny dashboard | v1.5.0 shipped — testthat suite (36 tests / 62 assertions) + GitHub Actions CI; README polished | ✅ Done | `9da4a6d` |
-| **bike-demand-ml-system** | Python FastAPI + ML training | v4.2.0 — Seoul training data refresh (OA-15182 + Open-Meteo, 2022-2024) | ✅ Done | `b4ce252` |
+| **bike-demand-ml-system** | Python FastAPI + ML training | v4.3.0 — Paris timezone fix + cross-city table alignment | ✅ Done | `ccfdf60` |
 
 ### Trained City Models (Python repo)
 
@@ -24,7 +24,7 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 | London | **316.56** | HOUR (0.71) | London | `artifacts/london/` |
 | NYC | **470.76** | HOUR (0.52) | New York | `artifacts/nyc/` |
 | Washington DC | **119.31** | HOUR (0.62) | Washington DC | `artifacts/dc/` ✅ |
-| Paris | **23.30** | HOUR (0.634) | Paris | `artifacts/paris/` ✅ |
+| Paris | **20.51** | HOUR (0.708) | Paris | `artifacts/paris/` ✅ |
 | Chicago | **202.99** | HOUR + TEMPERATURE (0.39 each) | Chicago | `artifacts/chicago/` ✅ |
 
 ### Next Milestones (Both Repos) — Priority Ordered
@@ -39,7 +39,8 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 | ~~4~~ | bike_demand_prediction | ~~Backlog — Paris/Chicago models~~ | ~~v1.4.0~~ | **✅ Shipped (2026-05-18)** |
 | ~~5~~ | bike_demand_prediction | ~~Backlog — testthat suite + CI~~ | ~~v1.5.0~~ | **✅ Shipped (2026-05-19)** |
 | ~~5.5~~ | bike-demand-ml-system | ~~Seoul training data refresh (OA-15182 + Open-Meteo)~~ | ~~v4.2.0~~ | **✅ Shipped (2026-05-21)** |
-| **6** | bike-demand-ml-system | 4-city analogous timezone bug fix (Paris/Chicago/NYC/DC) | v4.3.0 | — |
+| ~~5.6~~ | bike-demand-ml-system | ~~Paris timezone fix + Option B 2022 drop + cross-city table alignment~~ | ~~v4.3.0~~ | **✅ Shipped (2026-05-21)** |
+| ~~6~~ | bike-demand-ml-system | ~~4-city analogous timezone bug fix (Paris/Chicago/NYC/DC)~~ | ~~v4.3.0~~ | **✅ Scope shrunk to Paris-only after code inspection (NYC/DC/Chicago parse datetimes naively); shipped as Paris-only in v4.3.0** |
 | **7** | bike_demand_prediction | Backlog — Seoul GBFS | — | External API key |
 | **8** | bike_demand_prediction | Backlog — City expansion (SF/Amsterdam) | — | Data sourcing required |
 
@@ -123,7 +124,7 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 
 ## ⚠️ Known Limitations
 
-* Paris RMSE (23.30) reflects counter MEAN normalisation (~50–500/hr scale), not raw station volume — correct relative to training data
+* Paris RMSE (20.51 post-v4.3.0; was 23.30 pre-tz-fix) reflects counter MEAN normalisation (~50–500/hr scale), not raw station volume — correct relative to training data; 2022 source export dropped as a data-quality gate in v4.3.0 (intrinsic provider-side aggregation anomaly; reversible)
 * Reactive logic in `server.R` and `ui.R` not yet covered — would require `shinytest2` browser harness (out of scope for v1.5; candidate for a future phase)
 * Seoul GBFS not integrated (requires free API key at data.seoul.go.kr)
 * `USE_FASTAPI` is env-var controlled — no in-app toggle (by design for Docker simplicity)
@@ -140,7 +141,7 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 * Commits `9b1fd47` (code) + `1764b19` (renv.lock) pushed to origin/main
 
 ### ✅ Backlog — Paris/Chicago models (v1.4.0) — SHIPPED 2026-05-18
-* Paris RF — Vélib' Métropole open data (2022–2024, 26,297 rows); RMSE 23.30; `artifacts/paris/`
+* Paris RF — Vélib' Métropole open data (2023–2024, 17,539 rows; 2022 dropped in v4.3.0 as a data-quality gate); RMSE 20.51; `artifacts/paris/`
 * Chicago RF — Divvy quarterly CSVs (2019–2022, 32,720 rows); RMSE 202.99; `artifacts/chicago/`
 * Seoul fallback proxy removed for both cities
 
@@ -174,8 +175,8 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 
 **v4.2.0 shipped (2026-05-21) — Seoul training-data refresh in the ML repo.** UCI 2017-2018 baseline replaced with OA-15182 (Seoul Open Data Plaza, Jan 2022 – Dec 2024, 26,303 hourly rows joined with Open-Meteo historical weather). New Seoul RMSE 1,503.52 bikes/hr (vs UCI baseline 328.84). Shiny `README.md` Business Problem section synced this session; IBM Capstone Dataset section retained intact (UCI 8,760 is the historical evidence base for the R linear / Random Forest benchmarks in `data/processed/model.csv`).
 
-**Next move (Python-side, downstream impact here):** 4-city analogous timezone bug fix — `fetch_paris_weather.py`, `fetch_chicago_weather.py`, `fetch_nyc_weather.py`, `fetch_dc_weather.py` all use the same `tz_localize → tz_convert("UTC")` pattern paired with Open-Meteo `timezone=<local>`, baking a 1-6 hour offset into the training data's hour-of-day signal. Existing models pass tests but predictions are time-biased. Estimated v4.3.0, 2-3 sessions. Shiny impact will be RMSE row updates in the per-city table once the 4 cities retrain.
+**v4.3.0 shipped (2026-05-21) — Paris timezone fix + Option B 2022 drop + cross-city table alignment in the ML repo.** Scope corrected mid-spec from the original "4-city analogous bug" framing to Paris-only after code inspection confirmed NYC/DC/Chicago parse trip + weather datetimes naively (no `tz_convert` calls). Paris RMSE 20.51 (down from 23.30, −12.0%); 2022 source export dropped as a data-quality gate after the verification gate found it peaked 2h later than 2023+2024 in both AM and PM rush across DST seasons (intrinsic to the provider's aggregation pipeline; reversible single block in `fetch_paris_weather.py`). Bundled cosmetic follow-ups: `train.py` ASCII stdout (em-dash → `--`) + MAE/MSE rows added to NYC + DC RF tables (full cross-city alignment with Seoul post-v4.2.0 format). Tracked follow-ups block now empty for the first time since pre-v4.2.0.
 
-**Shiny-native alternatives:** Phase 8 / v1.7 — `shinytest2` browser harness for `server.R` / `ui.R` reactives (new R toolchain, multi-session); Priority 6 — Seoul **live station** feed upgrade (5-station `sample` key → full city via registered API key; pure config change once user has the key — separate concern from the OA-15182 training refresh, do not conflate).
+**Next move (Python-side, downstream impact here):** No queued thread. Open candidates: (a) Shiny Phase 8 / v1.7 — `shinytest2` browser harness for `server.R` / `ui.R` reactives (new R toolchain, multi-session); (b) verify/trigger Paris + Chicago promotion in MLflow Production registry (only 4 of 6 cities registered at v4.0.0 cut-off); (c) Shiny Priority 6 — Seoul **live station** feed upgrade (5-station `sample` key → full city via registered API key); (d) investigate Paris 2022 anomaly root cause upstream to potentially re-enable that 33% of data in a future v4.4+.
 
 Resume with: `"resume bike demand prediction project"`

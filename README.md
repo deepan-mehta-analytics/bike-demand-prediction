@@ -8,7 +8,7 @@ This project delivers a full-stack predictive analytics system for bike-sharing 
 
 The R pipeline benchmarks six model classes on a chronological 80/20 held-out split, achieving a Random Forest with R²=0.730 (RMSE 333.89 bikes/hr) — a 39% improvement over the baseline linear model. The Bikecast Shiny dashboard provides live 24-hour demand forecasts for six global cities rendered on an interactive Leaflet map, with city drill-down showing live GBFS station availability markers, demand-band filtering, and expand-to-modal charts.
 
-**v1.5 is shipped.** Phase 7 extended the dashboard into two real end-user tools: an **Operator tab** (fleet rebalancing alerts, demand vs. station capacity) and a **Rider tab** (live availability score, best-time recommendation, natural-language summary). The prediction backend is a Python FastAPI inference service with **per-city RF models for all six cities**, live on **GCP Cloud Run**; Docker Compose runs the full stack locally. **v1.2 adds a GCP Stream tab** — `bigrquery` queries `bike_demand.station_snapshots` in BigQuery directly from the Shiny app, displaying live 5-minute windowed avg/min/max bike availability for NYC, DC, London, and Chicago fed by the Apache Beam / Dataflow streaming pipeline (Python repo v3.0.0). **v1.3 adds a real-time Feed Health panel** — colour-coded GBFS feed status (LIVE / DELAYED / DOWN) per city in the sidebar, auto-refreshing every 5 minutes with graceful demo fallback when the OpenWeather API key is not set. **v1.4 adds city-specific RF models for Paris** (Vélib' Métropole, RMSE 23.30 bikes/hr) **and Chicago** (Divvy Bikes, RMSE 202.99 bikes/hr), replacing the Seoul fallback proxy for both cities. **v1.5 adds a 36-test / 62-assertion `testthat` suite** covering `model_prediction.R`, `gbfs_client.R`, and `bigquery_client.R` with `mockery`-stubbed HTTP, enforced by a fourth GitHub Actions CI job on every push and PR.
+**v1.5 is shipped.** Phase 7 extended the dashboard into two real end-user tools: an **Operator tab** (fleet rebalancing alerts, demand vs. station capacity) and a **Rider tab** (live availability score, best-time recommendation, natural-language summary). The prediction backend is a Python FastAPI inference service with **per-city RF models for all six cities**, live on **GCP Cloud Run**; Docker Compose runs the full stack locally. **v1.2 adds a GCP Stream tab** — `bigrquery` queries `bike_demand.station_snapshots` in BigQuery directly from the Shiny app, displaying live 5-minute windowed avg/min/max bike availability for NYC, DC, London, and Chicago fed by the Apache Beam / Dataflow streaming pipeline (Python repo v3.0.0). **v1.3 adds a real-time Feed Health panel** — colour-coded GBFS feed status (LIVE / DELAYED / DOWN) per city in the sidebar, auto-refreshing every 5 minutes with graceful demo fallback when the OpenWeather API key is not set. **v1.4 adds city-specific RF models for Paris** (Vélib' Métropole, RMSE 20.51 bikes/hr post-v4.3.0; was 23.30 in v1.4.0 baseline) **and Chicago** (Divvy Bikes, RMSE 202.99 bikes/hr), replacing the Seoul fallback proxy for both cities. **v1.5 adds a 36-test / 62-assertion `testthat` suite** covering `model_prediction.R`, `gbfs_client.R`, and `bigquery_client.R` with `mockery`-stubbed HTTP, enforced by a fourth GitHub Actions CI job on every push and PR.
 
 ### End-to-end ML pipeline: raw Seoul data → six competing models → live global demand forecast
 
@@ -384,7 +384,7 @@ A professional three-column dashboard built on the **Yeti Bootswatch** theme.
 - **Feed Health panel** — colour-coded sidebar panel (LIVE / DELAYED / DOWN) per city; `reactiveTimer` auto-refresh every 5 min; graceful demo fallback when `OPENWEATHER_KEY` not set *(v1.3.0 ✅)*
 
 **Features (v1.4 — shipped):**
-- **Paris RF model** — city-specific Vélib' Métropole model (RMSE 23.30 bikes/hr, HOUR 0.63); replaces Seoul fallback proxy *(v1.4.0 ✅)*
+- **Paris RF model** — city-specific Vélib' Métropole model (RMSE 20.51 bikes/hr post-v4.3.0; was 23.30 in v1.4.0 baseline; HOUR 0.71); replaces Seoul fallback proxy *(v1.4.0 ✅; refreshed in Python v4.3.0)*
 - **Chicago RF model** — city-specific Divvy model (RMSE 202.99 bikes/hr, HOUR + TEMPERATURE 0.39); replaces Seoul fallback proxy *(v1.4.0 ✅)*
 
 **Features (v1.5 — shipped):**
@@ -540,7 +540,7 @@ The capstone presentation covers the full pipeline from data collection through 
 - **Python RF weaker than R RF** — Python Random Forest achieves R²=0.518 / RMSE=376.7 bikes/hr vs R Track R²=0.730 / RMSE=333.89; gap is attributable to richer feature engineering and original-scale modelling in the R pipeline
 - **Lasso / Elastic Net over-penalised on Python track** — both produce negative R² at α=0.1 on the normalised target, indicating regularisation is too aggressive at that scale
 - **IBM model scored on Track 2 test set** — RMSE 342.60, R² 0.6723; see IBM Deployed Model section for full comparison
-- **Paris RMSE (23.30) uses normalised MEAN scale** — Vélib' source data reports individual station averages (~50–500 bikes/hr), not city-wide summed volume; value is correct relative to the training data distribution
+- **Paris RMSE (20.51 post-v4.3.0; was 23.30 in v1.4.0 baseline) uses normalised MEAN scale** — Vélib' source data reports individual station averages (~50–500 bikes/hr), not city-wide summed volume; value is correct relative to the training data distribution. The v4.3.0 refresh applied a timezone fix (Paris-local wall-clock alignment) plus a 2022 source-export drop (data-quality gate; reversible)
 - **OpenWeather free tier limits** — new API keys take up to 2 hours to activate; rate limits apply at scale
 - **renv library not included** — `renv/library/` is gitignored (platform-specific binaries); run `renv::restore()` to rebuild the local library from `renv.lock`
 
@@ -615,7 +615,7 @@ The capstone presentation covers the full pipeline from data collection through 
 
 ### ✅ v1.4.0 — Released (2026-05-18)
 
-- [x] Paris RF model — Vélib' Métropole open data (2022–2024, 26,297 rows); RMSE **23.30** bikes/hr; HOUR (0.63) top feature; replaces Seoul fallback
+- [x] Paris RF model — Vélib' Métropole open data (2023–2024, 17,539 rows; 2022 dropped in v4.3.0 as a data-quality gate); RMSE **20.51** bikes/hr post-v4.3.0 (was 23.30 in v1.4.0 baseline); HOUR (0.71) top feature; replaces Seoul fallback
 - [x] Chicago RF model — Divvy quarterly CSVs (2019–2022, 32,720 rows); RMSE **202.99** bikes/hr; HOUR + TEMPERATURE (0.39 each); replaces Seoul fallback
 
 ### 🔮 Backlog — Priority Ordered
