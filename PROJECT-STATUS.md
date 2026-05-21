@@ -12,7 +12,7 @@ Both repos form a single portfolio system. Track them together here.
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
 | **bike_demand_prediction** (this repo) | R Shiny dashboard | v1.5.0 shipped — testthat suite (36 tests / 62 assertions) + GitHub Actions CI; README polished | ✅ Done | `9da4a6d` |
-| **bike-demand-ml-system** | Python FastAPI + ML training | v4.1.0 — 6-city pytest suite shipped (27 tests, CI Job 7) | ✅ Done | `dfcf872` |
+| **bike-demand-ml-system** | Python FastAPI + ML training | v4.2.0 — Seoul training data refresh (OA-15182 + Open-Meteo, 2022-2024) | ✅ Done | `b4ce252` |
 
 ### Trained City Models (Python repo)
 
@@ -20,7 +20,7 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 
 | City | RMSE (bikes/hr) | Top Feature | Dashboard Cities | API Artifact |
 |------|-----------------|-------------|-----------------|--------------|
-| Seoul | **328.84** | TEMPERATURE (0.40) | Seoul | `artifacts/seoul/` |
+| Seoul | **1,503.52** | HOUR (0.468) | Seoul | `artifacts/seoul/` |
 | London | **316.56** | HOUR (0.71) | London | `artifacts/london/` |
 | NYC | **470.76** | HOUR (0.52) | New York | `artifacts/nyc/` |
 | Washington DC | **119.31** | HOUR (0.62) | Washington DC | `artifacts/dc/` ✅ |
@@ -38,8 +38,10 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 | ~~3~~ | bike_demand_prediction | ~~Feed Health Alerting — sidebar GBFS status panel~~ | ~~v1.3.0~~ | **✅ Shipped (2026-05-17)** |
 | ~~4~~ | bike_demand_prediction | ~~Backlog — Paris/Chicago models~~ | ~~v1.4.0~~ | **✅ Shipped (2026-05-18)** |
 | ~~5~~ | bike_demand_prediction | ~~Backlog — testthat suite + CI~~ | ~~v1.5.0~~ | **✅ Shipped (2026-05-19)** |
-| **6** | bike_demand_prediction | Backlog — Seoul GBFS | — | External API key |
-| **7** | bike_demand_prediction | Backlog — City expansion (SF/Amsterdam) | — | Data sourcing required |
+| ~~5.5~~ | bike-demand-ml-system | ~~Seoul training data refresh (OA-15182 + Open-Meteo)~~ | ~~v4.2.0~~ | **✅ Shipped (2026-05-21)** |
+| **6** | bike-demand-ml-system | 4-city analogous timezone bug fix (Paris/Chicago/NYC/DC) | v4.3.0 | — |
+| **7** | bike_demand_prediction | Backlog — Seoul GBFS | — | External API key |
+| **8** | bike_demand_prediction | Backlog — City expansion (SF/Amsterdam) | — | Data sourcing required |
 
 ---
 
@@ -170,7 +172,9 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 
 *Latest commit `9da4a6d` — docs(readme): polish staleness after v1.5 testthat ship (2026-05-19). Earlier same-day: `edd97e3` (testthat CI job), `c712d67` (CI refactor — R_VERSION env + cp guard), v1.5.0 release tag.*
 
-**Next move (Python-side, downstream impact here):** Seoul training-data refresh in the ML repo — v4.2.0 replacing stale UCI 2017-2018 data with OA-15182 (Seoul 따릉이 rental history, no API key). Full dataset facts in the ML repo's project memory at `project_seoul_dataset.md`. Shiny impact is README copy only: Quick Summary + Project Overview + Business Problem sections currently reference "8,760 hourly observations (Jan 2017 – Nov 2018)" — get rewritten as part of Sprint 3 cross-repo doc sync.
+**v4.2.0 shipped (2026-05-21) — Seoul training-data refresh in the ML repo.** UCI 2017-2018 baseline replaced with OA-15182 (Seoul Open Data Plaza, Jan 2022 – Dec 2024, 26,303 hourly rows joined with Open-Meteo historical weather). New Seoul RMSE 1,503.52 bikes/hr (vs UCI baseline 328.84). Shiny `README.md` Business Problem section synced this session; IBM Capstone Dataset section retained intact (UCI 8,760 is the historical evidence base for the R linear / Random Forest benchmarks in `data/processed/model.csv`).
+
+**Next move (Python-side, downstream impact here):** 4-city analogous timezone bug fix — `fetch_paris_weather.py`, `fetch_chicago_weather.py`, `fetch_nyc_weather.py`, `fetch_dc_weather.py` all use the same `tz_localize → tz_convert("UTC")` pattern paired with Open-Meteo `timezone=<local>`, baking a 1-6 hour offset into the training data's hour-of-day signal. Existing models pass tests but predictions are time-biased. Estimated v4.3.0, 2-3 sessions. Shiny impact will be RMSE row updates in the per-city table once the 4 cities retrain.
 
 **Shiny-native alternatives:** Phase 8 / v1.7 — `shinytest2` browser harness for `server.R` / `ui.R` reactives (new R toolchain, multi-session); Priority 6 — Seoul **live station** feed upgrade (5-station `sample` key → full city via registered API key; pure config change once user has the key — separate concern from the OA-15182 training refresh, do not conflate).
 

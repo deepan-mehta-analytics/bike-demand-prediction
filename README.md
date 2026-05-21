@@ -65,7 +65,7 @@ The R pipeline benchmarks six model classes on a chronological 80/20 held-out sp
 
 > How can weather and time-of-day patterns be used to forecast hourly bike-sharing demand, enabling operators to pre-position bikes, balance station inventory, and reduce rebalancing costs across global city networks?
 
-The Seoul Bike Sharing dataset provides 8,760 hourly observations (Jan 2017 – Nov 2018), combining weather measurements with ridership counts. The system learns these patterns and generalises them to five peer cities using live weather forecasts.
+The R / IBM Capstone pipeline learns from the UCI Seoul Bike Sharing dataset — 8,760 hourly observations (Jan 2017 – Nov 2018) combining weather measurements with ridership counts (see Dataset section). The production Python inference service (FastAPI repo `v4.2.0`) now trains the Seoul model on a refreshed source — OA-15182 from the Seoul Open Data Plaza (Jan 2022 – Dec 2024, 26,303 hourly rows joined with Open-Meteo historical weather) — and the dashboard generalises city-native RF models to five peer cities (London, NYC, DC, Paris, Chicago) via live weather forecasts.
 
 ---
 
