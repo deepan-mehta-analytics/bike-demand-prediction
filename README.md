@@ -390,9 +390,6 @@ A professional three-column dashboard built on the **Yeti Bootswatch** theme.
 **Features (v1.5 — shipped):**
 - **testthat suite** — 36-test automated suite (62 assertions across `model_prediction.R`, `gbfs_client.R`, `bigquery_client.R`) — HTTP layer stubbed via `mockery`, enforced by GitHub Actions CI on every push and PR *(v1.5.0 ✅)*
 
-**In development (v1.6):**
-- **Seoul live stations** — GBFS integration pending Seoul Open API key registration
-
 **Demand bands:**
 
 | Level | Bikes per 3h slot | Map Marker |
@@ -490,6 +487,20 @@ docker run -p 3838:3838 \
 
 Shiny at `http://localhost:3838/` · FastAPI served from Cloud Run (always up, no sibling repo needed).
 
+### Optional — Seoul full-coverage upgrade
+
+Seoul live-station markers ship in the city drill-down map by default. `shiny_app/gbfs_client.R::parse_seoul_openapi()` runs on Seoul Open API's public `"sample"` key out of the box and returns 5 real stations near Mapo-gu — enough to verify the data plumbing works.
+
+To unlock the full ~1,471-station Seoul coverage, register a free personal key at [data.seoul.go.kr](https://data.seoul.go.kr) and add it to your `.Renviron`:
+
+```
+SEOUL_API_KEY=your_actual_seoul_key_here
+```
+
+Restart the Shiny app to pick up the new key. This is a runtime config change — no version bump, no code release, no Docker rebuild.
+
+> Note: the ML training pipeline (`bike-demand-ml-system` repo, Python `v4.2.0`) uses Seoul OA-15182 historical data from the same `data.seoul.go.kr` platform, but as a **public dataset download** that requires no authentication. The `SEOUL_API_KEY` here is only for the live-station endpoint.
+
 ---
 
 ## 🧪 Tests
@@ -543,7 +554,7 @@ The capstone presentation covers the full pipeline from data collection through 
 - **Paris RMSE (20.51 post-v4.3.0; was 23.30 in v1.4.0 baseline) uses normalised MEAN scale** — Vélib' source data reports individual station averages (~50–500 bikes/hr), not city-wide summed volume; value is correct relative to the training data distribution. The v4.3.0 refresh applied a timezone fix (Paris-local wall-clock alignment) plus a 2022 source-export drop (data-quality gate; reversible)
 - **OpenWeather free tier limits** — new API keys take up to 2 hours to activate; rate limits apply at scale
 - **Reactive logic not covered by tests** — `server.R` and `ui.R` reactive flows would require a `shinytest2` browser harness; out of scope for v1.5, candidate for a future phase. The v1.5 `testthat` suite covers pure-function modules (`model_prediction.R`, `gbfs_client.R`, `bigquery_client.R`) with HTTP layer stubbed via `mockery`
-- **Seoul GBFS not integrated** — requires a free API key from `data.seoul.go.kr`; tracked as Backlog Priority 6. The Seoul tab currently runs on the public `"sample"` key (returns 5 stations near Mapo-gu); full ~1,471-station coverage unlocks when a registered key is set as `SEOUL_API_KEY`
+- **Seoul live-station coverage is sample-key-only by default** — `shiny_app/gbfs_client.R::parse_seoul_openapi()` ships and runs on Seoul Open API's public `"sample"` key, returning 5 real stations near Mapo-gu (verified in commit `8682242`). Full ~1,471-station coverage is a `.Renviron` upgrade (`SEOUL_API_KEY=<registered_key>`) documented under "Optional — Seoul full-coverage upgrade" in How to Run — it is not a code release or backlog feature
 - **`USE_FASTAPI` is env-var controlled** — no in-app toggle (by design for Docker simplicity); flip via `USE_FASTAPI=true` to switch from the local `model.csv` linear fallback to the FastAPI per-city RF prediction service
 - **GCP Stream tab requires service-account credentials** — `GOOGLE_APPLICATION_CREDENTIALS` env var must point to a GCP service-account JSON with BigQuery Job User + Data Viewer roles; tab gracefully shows 3-step setup instructions when not set, so the rest of the app is unaffected
 - **renv library not included** — `renv/library/` is gitignored (platform-specific binaries); run `renv::restore()` to rebuild the local library from `renv.lock`
@@ -627,8 +638,8 @@ The capstone presentation covers the full pipeline from data collection through 
 - [x] Washington DC added — Capital Bikeshare GBFS v2, RF model RMSE 119.31 bikes/hr
 - [x] ~~**Priority 4**~~ — Train Paris + Chicago RF models (v1.4.0) ✅ Shipped 2026-05-18
 - [x] ~~**Priority 5**~~ — testthat suite (36 tests / 62 assertions: model_prediction.R, gbfs_client.R, bigquery_client.R) + GitHub Actions CI ✅ Shipped 2026-05-19 (v1.5.0)
-- [ ] **Priority 6** — Seoul GBFS integration (free API key at data.seoul.go.kr)
-- [ ] **Priority 7** — Expand to 8 cities — San Francisco (Ford GoBike) or Amsterdam (OV-fiets)
+- [x] ~~**Priority 7**~~ — Seoul GBFS integration ✅ Shipped on `sample` key 2026-05-17 (commit `8682242`); full-coverage upgrade demoted 2026-05-23 to runtime `.Renviron` config — see "Optional — Seoul full-coverage upgrade" in How to Run
+- [ ] **Priority 8** — Expand to 8 cities — San Francisco (Ford GoBike) or Amsterdam (OV-fiets)
 
 ---
 

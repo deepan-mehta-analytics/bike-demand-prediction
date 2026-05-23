@@ -41,7 +41,7 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 | ~~5.5~~ | bike-demand-ml-system | ~~Seoul training data refresh (OA-15182 + Open-Meteo)~~ | ~~v4.2.0~~ | **✅ Shipped (2026-05-21)** |
 | ~~5.6~~ | bike-demand-ml-system | ~~Paris timezone fix + Option B 2022 drop + cross-city table alignment~~ | ~~v4.3.0~~ | **✅ Shipped (2026-05-21)** |
 | ~~6~~ | bike-demand-ml-system | ~~4-city analogous timezone bug fix (Paris/Chicago/NYC/DC)~~ | ~~v4.3.0~~ | **✅ Scope shrunk to Paris-only after code inspection (NYC/DC/Chicago parse datetimes naively); shipped as Paris-only in v4.3.0** |
-| **7** | bike_demand_prediction | Backlog — Seoul GBFS | — | External API key |
+| ~~7~~ | bike_demand_prediction | ~~Backlog — Seoul GBFS~~ | — | **✅ Integration shipped 2026-05-17 (commit `8682242`) on `sample` key; full-coverage upgrade demoted 2026-05-23 to runtime `.Renviron` config — see Shiny README "Optional — Seoul full-coverage upgrade"** |
 | **8** | bike_demand_prediction | Backlog — City expansion (SF/Amsterdam) | — | Data sourcing required |
 
 ---
@@ -126,7 +126,7 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 
 * Paris RMSE (20.51 post-v4.3.0; was 23.30 pre-tz-fix) reflects counter MEAN normalisation (~50–500/hr scale), not raw station volume — correct relative to training data; 2022 source export dropped as a data-quality gate in v4.3.0 (intrinsic provider-side aggregation anomaly; reversible)
 * Reactive logic in `server.R` and `ui.R` not yet covered — would require `shinytest2` browser harness (out of scope for v1.5; candidate for a future phase)
-* Seoul GBFS not integrated (requires free API key at data.seoul.go.kr)
+* Seoul live-station coverage is sample-key-only by default — `parse_seoul_openapi()` ships and runs on the public `"sample"` key (5 real stations near Mapo-gu); full ~1,471-station coverage unlocks via `SEOUL_API_KEY` runtime config (see Shiny README "Optional — Seoul full-coverage upgrade")
 * `USE_FASTAPI` is env-var controlled — no in-app toggle (by design for Docker simplicity)
 * GCP Stream tab requires `GOOGLE_APPLICATION_CREDENTIALS` env var pointing to a GCP service account JSON — not configured by default; tab shows setup instructions when not set
 
@@ -151,9 +151,11 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 * GitHub Actions `testthat` job (4th job in `ci.yml`) — mirrors `r-check`'s renv-restore pattern, shares its renv cache key
 * Cold-cache run: ~5 min; warm-cache run: ~1 min (62 assertions in ~2 s once renv is restored)
 
-### Backlog — Priority 7: Seoul GBFS
-* Seoul live station markers (free API key required at data.seoul.go.kr)
-* External dependency — low ROI until key is obtained
+### ~~Backlog — Priority 7: Seoul GBFS~~ — DEMOTED 2026-05-23
+* Integration shipped in commit `8682242` (2026-05-17); `parse_seoul_openapi()` runs on Seoul Open API's public `"sample"` key returning 5 real stations near Mapo-gu (verified locally)
+* Full ~1,471-station coverage is a `.Renviron` change (`SEOUL_API_KEY=<registered_key>`) — not a code release; documented in Shiny README under "Optional — Seoul full-coverage upgrade"
+* ML repo's Seoul training data (OA-15182, Python `v4.2.0`) came from the same `data.seoul.go.kr` platform as a public dataset download — no auth ever needed; the personal key is only for the live-station endpoint
+* No longer a backlog item — tracked as an optional runtime config
 
 ### Backlog — Priority 8: City expansion
 * Expand to 8 cities — San Francisco (Ford GoBike) or Amsterdam (OV-fiets)
@@ -171,12 +173,12 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 - Task 4 (`cce5be9`): `tests/testthat/test-bigquery-client.R` (4 test_that / 4 assertions)
 - Task 5 (`edd97e3`): `testthat` job appended to `ci.yml`; CI run 26079707740 green on all 4 jobs
 
-*Latest commit `9da4a6d` — docs(readme): polish staleness after v1.5 testthat ship (2026-05-19). Earlier same-day: `edd97e3` (testthat CI job), `c712d67` (CI refactor — R_VERSION env + cp guard), v1.5.0 release tag.*
+*Latest v1.5 ship commit `9da4a6d` — docs(readme): polish staleness after v1.5 testthat ship (2026-05-19). Earlier same-day: `edd97e3` (testthat CI job), `c712d67` (CI refactor — R_VERSION env + cp guard), v1.5.0 release tag. Post-ship doc activity through 2026-05-23 listed in the ecosystem snapshot row above.*
 
 **v4.2.0 shipped (2026-05-21) — Seoul training-data refresh in the ML repo.** UCI 2017-2018 baseline replaced with OA-15182 (Seoul Open Data Plaza, Jan 2022 – Dec 2024, 26,303 hourly rows joined with Open-Meteo historical weather). New Seoul RMSE 1,503.52 bikes/hr (vs UCI baseline 328.84). Shiny `README.md` Business Problem section synced this session; IBM Capstone Dataset section retained intact (UCI 8,760 is the historical evidence base for the R linear / Random Forest benchmarks in `data/processed/model.csv`).
 
 **v4.3.0 shipped (2026-05-21) — Paris timezone fix + Option B 2022 drop + cross-city table alignment in the ML repo.** Scope corrected mid-spec from the original "4-city analogous bug" framing to Paris-only after code inspection confirmed NYC/DC/Chicago parse trip + weather datetimes naively (no `tz_convert` calls). Paris RMSE 20.51 (down from 23.30, −12.0%); 2022 source export dropped as a data-quality gate after the verification gate found it peaked 2h later than 2023+2024 in both AM and PM rush across DST seasons (intrinsic to the provider's aggregation pipeline; reversible single block in `fetch_paris_weather.py`). Bundled cosmetic follow-ups: `train.py` ASCII stdout (em-dash → `--`) + MAE/MSE rows added to NYC + DC RF tables (full cross-city alignment with Seoul post-v4.2.0 format). Tracked follow-ups block now empty for the first time since pre-v4.2.0.
 
-**Next move (Python-side, downstream impact here):** Python `v4.4.0` in design phase (S1 complete 2026-05-23 — spec `dac2990` + plan `e8d26bb` committed; S2 next on Python side). v4.4.0 scope: weekly weather-feature drift monitor (`monitoring/` package + GitHub Actions cron; PSI per feature vs same-season training baseline; markdown report committed back to `main`) + bundled MLflow Paris + Chicago promotion to 6/6 (Dockerfile.training 2-line fix). **No Shiny code changes expected in v4.4.0** — drift monitor lives entirely in the Python repo; FastAPI `/predict` contract unchanged. Open Shiny-side candidates (independent of v4.4.0): (a) Shiny Phase 8 / v1.7 — `shinytest2` browser harness for `server.R` / `ui.R` reactives (new R toolchain, multi-session); (b) Shiny Priority 6 — Seoul **live station** feed upgrade (5-station `sample` key → full city via registered API key); (c) investigate Paris 2022 anomaly root cause upstream to potentially re-enable that 33% of data in a future Python v4.5+.
+**Next move (Python-side, downstream impact here):** Python `v4.4.0` in design phase (S1 complete 2026-05-23 — spec `dac2990` + plan `e8d26bb` committed; S2 next on Python side). v4.4.0 scope: weekly weather-feature drift monitor (`monitoring/` package + GitHub Actions cron; PSI per feature vs same-season training baseline; markdown report committed back to `main`) + bundled MLflow Paris + Chicago promotion to 6/6 (Dockerfile.training 2-line fix). **No Shiny code changes expected in v4.4.0** — drift monitor lives entirely in the Python repo; FastAPI `/predict` contract unchanged. Open Shiny-side candidates (independent of v4.4.0): (a) Shiny Phase 8 / v1.7 — `shinytest2` browser harness for `server.R` / `ui.R` reactives (new R toolchain, multi-session); (b) investigate Paris 2022 anomaly root cause upstream to potentially re-enable that 33% of data in a future Python v4.5+. Former Seoul live-station upgrade candidate demoted 2026-05-23 to runtime config (see Shiny README "Optional — Seoul full-coverage upgrade") — integration already shipped on `sample` key in commit `8682242`.
 
 Resume with: `"resume bike demand prediction project"`
