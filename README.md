@@ -542,6 +542,10 @@ The capstone presentation covers the full pipeline from data collection through 
 - **IBM model scored on Track 2 test set** — RMSE 342.60, R² 0.6723; see IBM Deployed Model section for full comparison
 - **Paris RMSE (20.51 post-v4.3.0; was 23.30 in v1.4.0 baseline) uses normalised MEAN scale** — Vélib' source data reports individual station averages (~50–500 bikes/hr), not city-wide summed volume; value is correct relative to the training data distribution. The v4.3.0 refresh applied a timezone fix (Paris-local wall-clock alignment) plus a 2022 source-export drop (data-quality gate; reversible)
 - **OpenWeather free tier limits** — new API keys take up to 2 hours to activate; rate limits apply at scale
+- **Reactive logic not covered by tests** — `server.R` and `ui.R` reactive flows would require a `shinytest2` browser harness; out of scope for v1.5, candidate for a future phase. The v1.5 `testthat` suite covers pure-function modules (`model_prediction.R`, `gbfs_client.R`, `bigquery_client.R`) with HTTP layer stubbed via `mockery`
+- **Seoul GBFS not integrated** — requires a free API key from `data.seoul.go.kr`; tracked as Backlog Priority 6. The Seoul tab currently runs on the public `"sample"` key (returns 5 stations near Mapo-gu); full ~1,471-station coverage unlocks when a registered key is set as `SEOUL_API_KEY`
+- **`USE_FASTAPI` is env-var controlled** — no in-app toggle (by design for Docker simplicity); flip via `USE_FASTAPI=true` to switch from the local `model.csv` linear fallback to the FastAPI per-city RF prediction service
+- **GCP Stream tab requires service-account credentials** — `GOOGLE_APPLICATION_CREDENTIALS` env var must point to a GCP service-account JSON with BigQuery Job User + Data Viewer roles; tab gracefully shows 3-step setup instructions when not set, so the rest of the app is unaffected
 - **renv library not included** — `renv/library/` is gitignored (platform-specific binaries); run `renv::restore()` to rebuild the local library from `renv.lock`
 
 ---
