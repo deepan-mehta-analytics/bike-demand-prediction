@@ -553,7 +553,7 @@ The capstone presentation covers the full pipeline from data collection through 
 - [x] Convert Python RMSE to original scale — inverse min-max; RF RMSE 376.7 bikes/hr
 - [x] `requirements.txt` (Python) and `install_packages.R` (R) added
 - [x] IBM model scored on held-out test set — RMSE 342.60, R² 0.6723
-- [x] Pin R packages via `renv::snapshot()` — `renv.lock` (R 4.4.3, 139 packages pinned)
+- [x] Pin R packages via `renv::snapshot()` — `renv.lock` (R 4.4.3, 139 packages pinned at v1.0.0 ship; 201 today after `bigrquery` + `testthat` + `mockery` additions in v1.2 / v1.5)
 - [x] Add MIT LICENSE (2026, Deepan Mehta)
 - [x] Add GitHub Actions CI — Python + R smoke tests, `model.csv` integrity check
 
@@ -561,7 +561,7 @@ The capstone presentation covers the full pipeline from data collection through 
 
 #### Phase 7A — City Replacement ✅
 - [x] Replace Suzhou (no GBFS) with Chicago (Divvy GBFS v2)
-- [x] `config/cities.yaml` — GBFS URLs, BigQuery datasets, timezones for all 5 cities
+- [x] `config/cities.yaml` — GBFS URLs, BigQuery datasets, timezones for all 5 cities (Washington DC added later as 6th city in 2026-05-08; `cities.yaml` now covers 6)
 - [x] `config/gcp_config.yaml` — Pub/Sub topic, BigQuery dataset, local-mode paths
 
 #### Phase 7B — Live Station Data ✅
@@ -601,7 +601,7 @@ The capstone presentation covers the full pipeline from data collection through 
 
 - [x] `shiny_app/bigquery_client.R` — BQ service-account auth, `query_city_trend()` (2h rolling window), `query_latest_snapshot()` (newest window per city)
 - [x] GCP Stream tab — `bigrquery` queries `bike_demand.station_snapshots`; ggplot2 ribbon (min/max band) + avg line; auto-refresh every 5 min
-- [x] `renv.lock` — bigrquery 1.6.2 + 22 deps added via `renv::record()` (182 packages total)
+- [x] `renv.lock` — bigrquery 1.6.2 + 22 deps added via `renv::record()` (182 packages total at v1.2.0 ship; 201 today after v1.5 `testthat` + `mockery` additions)
 - [x] Graceful degradation — tab shows 3-step setup instructions when `GOOGLE_APPLICATION_CREDENTIALS` not set
 
 ### ✅ v1.3.0 — Released (2026-05-17)

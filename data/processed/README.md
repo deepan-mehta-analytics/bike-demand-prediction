@@ -1,124 +1,64 @@
-\# 📂 Processed Data
+# 📂 Processed Data
 
+This directory contains cleaned and transformed datasets used for modelling, analysis, and prediction.
 
+---
 
-This directory contains cleaned and transformed datasets used for modeling, analysis, and prediction.
+## 📌 Description
 
+The processed data represents the **transformation layer** of the pipeline, where raw data is:
 
+- Cleaned
+- Standardised
+- Enriched with engineered features
 
-\---
+These datasets are optimised for machine learning and downstream analytics.
 
+---
 
+## 📄 Files
 
-\## 📌 Description
+### 1. `clean_bike_data.csv`
 
+- Cleaned version of the raw dataset
+- Includes:
+  - Parsed datetime features
+  - Removed missing or inconsistent values
+  - Standardised column formats
+  - Derived temporal features (hour, day, season)
 
+---
 
-The processed data represents the \*\*transformation layer\*\* of the pipeline, where raw data is:
+### 2. `model.csv`
 
+- Final dataset used for the IBM Capstone Shiny deployment model
+- Provided by IBM Skills Network; serves as the linear-model coefficient table consumed by `shiny_app/model_prediction.R`
+- Includes:
+  - Selected features relevant for prediction
+  - Encoded categorical variables
+  - Scaled / normalised inputs (if applicable)
 
+---
 
-\- Cleaned
-
-\- Standardized
-
-\- Enriched with engineered features
-
-
-
-These datasets are optimized for machine learning and downstream analytics.
-
-
-
-\---
-
-
-
-\## 📄 Files
-
-
-
-\### 1. `clean\_bike\_data.csv`
-
-\- Cleaned version of the raw dataset
-
-\- Includes:
-
-&#x20; - Parsed datetime features
-
-&#x20; - Removed missing or inconsistent values
-
-&#x20; - Standardized column formats
-
-&#x20; - Derived temporal features (hour, day, season)
-
-
-
-\---
-
-
-
-\### 2. `model.csv`
-
-\- Final dataset used for training predictive models
-
-\- Includes:
-
-&#x20; - Selected features relevant for prediction
-
-&#x20; - Encoded categorical variables
-
-&#x20; - Scaled/normalized inputs (if applicable)
-
-
-
-\---
-
-
-
-\## ⚙️ Usage
-
-
+## ⚙️ Usage
 
 This data is used in:
 
+- **Model Training**
+- **Model Evaluation**
+- **Feature Importance Analysis**
+- **Prediction Pipeline**
 
+---
 
-\- \*\*Model Training\*\*
-
-\- \*\*Model Evaluation\*\*
-
-\- \*\*Feature Importance Analysis\*\*
-
-\- \*\*Prediction Pipeline\*\*
-
-
-
-\---
-
-
-
-\## 🔁 Pipeline Flow
-
-
+## 🔁 Pipeline Flow
 
 Raw Data → Cleaning → Feature Engineering → Model Dataset
 
+---
 
+## ⚠️ Notes
 
-
-
-\---
-
-
-
-\## ⚠️ Notes
-
-
-
-\- Files in this directory are \*\*generated outputs\*\*
-
-\- Should not be manually edited
-
-\- Regenerated through notebooks or pipeline scripts
-
+- Files in this directory are **generated outputs**
+- Should not be manually edited
+- Regenerated through notebooks or pipeline scripts

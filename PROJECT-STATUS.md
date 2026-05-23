@@ -11,7 +11,7 @@ Both repos form a single portfolio system. Track them together here.
 
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
-| **bike_demand_prediction** (this repo) | R Shiny dashboard | v1.5.0 shipped — testthat suite (36 tests / 62 assertions) + GitHub Actions CI; README polished | ✅ Done | `9da4a6d` |
+| **bike_demand_prediction** (this repo) | R Shiny dashboard | v1.5.0 shipped — testthat suite (36 tests / 62 assertions) + GitHub Actions CI; README polished | ✅ Done | `c4a27ae` |
 | **bike-demand-ml-system** | Python FastAPI + ML training | v4.3.0 — Paris timezone fix + cross-city table alignment | ✅ Done | `ccfdf60` |
 
 ### Trained City Models (Python repo)
