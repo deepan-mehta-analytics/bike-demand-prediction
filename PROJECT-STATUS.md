@@ -12,7 +12,7 @@ Both repos form a single portfolio system. Track them together here.
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
 | **bike_demand_prediction** (this repo) | R Shiny dashboard | v1.5.0 shipped — testthat suite + CI; v1.6.0 Sprint 1 (Workstream A) complete — GCP Stream tab now live via Cloud Run poller | ✅ Done | `feacd35` |
-| **bike-demand-ml-system** | Python FastAPI + ML training | v1.6.0 Sprint 1 shipped — `gbfs-poller` Cloud Run + `gbfs-poller-cron` Scheduler + BQ 7-day partitions; v4.3.0 was Paris tz fix; v4.4.0 drift monitoring in design | ✅ Done | `5d494f2` |
+| **bike-demand-ml-system** | Python FastAPI + ML training | **v3.1.0 shipped (2026-05-25)** — `gbfs-poller` Cloud Run + `gbfs-poller-cron` Scheduler + BQ 7-day partitions, replacing the v3.0.0 Dataflow path at zero always-free-tier cost (joint cross-repo work tracked as Shiny v1.6.0 Sprint 1). v4.3.0 was Paris tz fix; v4.4.0 drift monitoring in design | ✅ Done | `7625f17` |
 
 ### Trained City Models (Python repo)
 
@@ -42,7 +42,7 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 | ~~5.6~~ | bike-demand-ml-system | ~~Paris timezone fix + Option B 2022 drop + cross-city table alignment~~ | ~~v4.3.0~~ | **✅ Shipped (2026-05-21)** |
 | ~~6~~ | bike-demand-ml-system | ~~4-city analogous timezone bug fix (Paris/Chicago/NYC/DC)~~ | ~~v4.3.0~~ | **✅ Scope shrunk to Paris-only after code inspection (NYC/DC/Chicago parse datetimes naively); shipped as Paris-only in v4.3.0** |
 | ~~7~~ | bike_demand_prediction | ~~Backlog — Seoul GBFS~~ | — | **✅ Integration shipped 2026-05-17 (commit `8682242`) on `sample` key; full-coverage upgrade demoted 2026-05-23 to runtime `.Renviron` config — see Shiny README "Optional — Seoul full-coverage upgrade"** |
-| ~~8.0~~ | bike-demand-ml-system + bike_demand_prediction | ~~v1.6.0 Sprint 1 — Cloud Run poller + BQ partitioning~~ | ~~v1.6.0~~ | **✅ Shipped 2026-05-25 — `gbfs-poller` Cloud Run + `gbfs-poller-cron` Scheduler live; BQ DAY-partitioned (7-day TTL); 6,032 rows confirmed across 4 cities in first cron window** |
+| ~~8.0~~ | bike-demand-ml-system + bike_demand_prediction | ~~Sprint 1 — Cloud Run poller + BQ partitioning~~ | ~~v3.1.0 (ML) / v1.6.0 Sprint 1 (Shiny)~~ | **✅ Shipped 2026-05-25 — `gbfs-poller` Cloud Run + `gbfs-poller-cron` Scheduler live; BQ DAY-partitioned (7-day TTL); 6,032 rows confirmed across 4 cities in first cron window. ML release tag `v3.1.0`; Shiny tracks the same work as Sprint 1 of its v1.6.0 dashboard-truth-and-freshness ship.** |
 | **8** | bike_demand_prediction | Backlog — City expansion (SF/Amsterdam) | — | Data sourcing required |
 
 ---
@@ -181,7 +181,7 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 
 **v4.3.0 shipped (2026-05-21) — Paris timezone fix + Option B 2022 drop + cross-city table alignment in the ML repo.** Scope corrected mid-spec from the original "4-city analogous bug" framing to Paris-only after code inspection confirmed NYC/DC/Chicago parse trip + weather datetimes naively (no `tz_convert` calls). Paris RMSE 20.51 (down from 23.30, −12.0%); 2022 source export dropped as a data-quality gate after the verification gate found it peaked 2h later than 2023+2024 in both AM and PM rush across DST seasons (intrinsic to the provider's aggregation pipeline; reversible single block in `fetch_paris_weather.py`). Bundled cosmetic follow-ups: `train.py` ASCII stdout (em-dash → `--`) + MAE/MSE rows added to NYC + DC RF tables (full cross-city alignment with Seoul post-v4.2.0 format). Tracked follow-ups block now empty for the first time since pre-v4.2.0.
 
-**v1.6.0 Sprint 1 shipped (2026-05-25) — GCP Stream tab reactivated.** `gbfs-poller` Cloud Run service (FastAPI + uvicorn, `python:3.11-slim`, non-root) + `gbfs-poller-cron` Cloud Scheduler (5-min cron, OIDC auth, attempt-deadline 540 s) deployed to `us-central1`. BQ table recreated with DAY partitioning (7-day TTL); `6,032` rows confirmed across London / NYC / Paris / Chicago in first automated 05:50 UTC window. ML repo commit: `5d494f2`.
+**v1.6.0 Sprint 1 shipped (2026-05-25) — GCP Stream tab reactivated.** `gbfs-poller` Cloud Run service (FastAPI + uvicorn, `python:3.11-slim`, non-root) + `gbfs-poller-cron` Cloud Scheduler (5-min cron, OIDC auth, attempt-deadline 540 s) deployed to `us-central1`. BQ table recreated with DAY partitioning (7-day TTL); `6,032` rows confirmed across London / NYC / Paris / Chicago in first automated 05:50 UTC window. ML side shipped as release [`v3.1.0`](https://github.com/deepan-mehta-analytics/bike-demand-ml-system/releases/tag/v3.1.0) (commits `6d6e5a2` → `7625f17`); ML repo now uses dual-version notation for joint cross-repo work going forward to prevent the v1.4.0 / v1.6.0 mis-naming pattern that conflated Shiny sprint numbers with ML release numbers.
 
 **Sprint 2 (Workstream B — Shiny forecast freshness + honest demo):** Brainstorming → writing-plans → executing-plans cycle pending.
 
