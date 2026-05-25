@@ -148,10 +148,10 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 * Seoul fallback proxy removed for both cities
 
 ### v1.5.0 — testthat suite + CI (shipped 2026-05-19)
-* 36-test / 62-assertion testthat suite: `test-model-prediction.R` (20 assertions), `test-gbfs-client.R` (38), `test-bigquery-client.R` (4)
+* 37-test / 63-assertion testthat suite: `test-model-prediction.R` (21 assertions; +1 from Sprint 2 sinusoidal variation test), `test-gbfs-client.R` (38), `test-bigquery-client.R` (4)
 * HTTP layer fully stubbed via `mockery::stub()` — no network, no cassettes
 * GitHub Actions `testthat` job (4th job in `ci.yml`) — mirrors `r-check`'s renv-restore pattern, shares its renv cache key
-* Cold-cache run: ~5 min; warm-cache run: ~1 min (62 assertions in ~2 s once renv is restored)
+* Cold-cache run: ~5 min; warm-cache run: ~1 min (63 assertions in ~2 s once renv is restored)
 
 ### ~~Backlog — Priority 7: Seoul GBFS~~ — DEMOTED 2026-05-23
 * Integration shipped in commit `8682242` (2026-05-17); `parse_seoul_openapi()` runs on Seoul Open API's public `"sample"` key returning 5 real stations near Mapo-gu (verified locally)
@@ -167,7 +167,7 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 
 ## 🚀 Next Step
 
-**v1.5.0 shipped (2026-05-19) — testthat suite + CI.** Three test files (62 assertions across 36 `test_that` blocks), HTTP-mocked via `mockery`, enforced by a fourth GitHub Actions CI job that mirrors `r-check`'s renv pattern. All five acceptance criteria in the parent spec verified.
+**v1.5.0 shipped (2026-05-19) — testthat suite + CI.** Three test files (62 assertions across 36 `test_that` blocks at v1.5.0 ship; 63/37 today after Sprint 2 added a sinusoidal variation test in commit `ea687f0`), HTTP-mocked via `mockery`, enforced by a fourth GitHub Actions CI job that mirrors `r-check`'s renv pattern. All five acceptance criteria in the parent spec verified.
 
 - Task 1 (`717bfd2`): `testthat` + `mockery` in renv.lock; `tests/testthat.R` entrypoint
 - Task 2 (`401062a`): `tests/testthat/test-model-prediction.R` (16 test_that / 20 assertions)
@@ -183,7 +183,7 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 
 **v1.6.0 Sprint 1 shipped (2026-05-25) — GCP Stream tab reactivated.** `gbfs-poller` Cloud Run service (FastAPI + uvicorn, `python:3.11-slim`, non-root) + `gbfs-poller-cron` Cloud Scheduler (5-min cron, OIDC auth, attempt-deadline 540 s) deployed to `us-central1`. BQ table recreated with DAY partitioning (7-day TTL); `6,032` rows confirmed across London / NYC / Paris / Chicago in first automated 05:50 UTC window. ML side shipped as release [`v3.1.0`](https://github.com/deepan-mehta-analytics/bike-demand-ml-system/releases/tag/v3.1.0) (commits `6d6e5a2` → `7625f17`); ML repo now uses dual-version notation for joint cross-repo work going forward to prevent the v1.4.0 / v1.6.0 mis-naming pattern that conflated Shiny sprint numbers with ML release numbers.
 
-**Sprint 2 (Workstream B — Shiny forecast freshness + honest demo):** Brainstorming → writing-plans → executing-plans cycle pending.
+**Sprint 2 (Workstream B — Shiny forecast freshness + honest demo) SHIPPED 2026-05-25.** All 7 tasks executed per plan `b3eb764`. Commits: `ea687f0` (Task 1+2 — sinusoidal diurnal variation in `generate_demo_weather_data()` + failing-test-first), `967c465` (Task 2 follow-up — peak/trough comment fix), `e8f4ddc` (Tasks 3+4+5+6 — reactive refactor of `server.R` with 1-hour `weather_timer`, 14 consumers updated to call reactives with parens, 3 build functions take `fmt_start`/`fmt_end` as explicit params), `faef978` (Task 7 — `ui.R` GCP Stream hint text + `bigquery_client.R` comment updated from Dataflow to Cloud Run GBFS poller). Verified: parse OK, no bare reactive references, testthat 63/63 pass, all 4 Shiny CI jobs green on `faef978`.
 
 **Sprint 3 (Workstream C — honest claims + meaningful comparisons):** Not yet started.
 
