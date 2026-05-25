@@ -116,10 +116,57 @@ update_feed_state <- function(feed_state, city, result) {
 shinyServer(function(input, output, session) {
   
   # ---------------------------------------------------------------------------
-  # Forecast data fetched once on startup; station data refreshes via reactiveTimer every 5 min
-  # Each city now has 8 rows (8 x 3-hour slots = next 24 hours)
+  # Hourly weather reactive block — replaces the startup-time plain assignment.
+  # weather_timer fires every hour; all derived reactives (forecast_window,
+  # cities_max_bike) recompute automatically. Consumers call city_weather_bike_df()
+  # and cities_max_bike() with parentheses — they are reactive expressions, not frames.
   # ---------------------------------------------------------------------------
-  city_weather_bike_df <- test_weather_data_generation()
+
+  # ── 1-hour refresh timer ─────────────────────────────────────────────────────
+  weather_timer <- reactiveTimer(3600000)                        # fires every 3 600 000 ms = 1 hour
+
+  # ── Main weather + prediction frame ──────────────────────────────────────────
+  # Re-runs each time weather_timer() invalidates (hourly) and on session start.
+  # test_weather_data_generation() tries live OpenWeather first; falls back to
+  # generate_demo_weather_data() on any error (missing key, network failure, etc.).
+  city_weather_bike_df <- reactive({
+    weather_timer()                                              # declare timer dependency
+    df <- test_weather_data_generation()                         # live → demo fallback
+    df %>%
+      mutate(FORECASTDATETIME_DT = as.POSIXct(                  # parse string → POSIXct UTC
+        FORECASTDATETIME,
+        format = "%Y-%m-%d %H:%M:%S",
+        tz     = "UTC"
+      ))
+  })
+
+  # ── Forecast window strings ───────────────────────────────────────────────────
+  # Returns a named list: list(fmt_start = "...", fmt_end = "...").
+  # Callers: w <- forecast_window(); then use w$fmt_start and w$fmt_end.
+  forecast_window <- reactive({
+    df    <- city_weather_bike_df()                              # read latest weather frame
+    start <- min(df$FORECASTDATETIME_DT, na.rm = TRUE)          # earliest forecast slot
+    end   <- max(df$FORECASTDATETIME_DT, na.rm = TRUE)          # latest forecast slot
+    list(
+      fmt_start = format(start, "%d %b %Y %H:%M"),              # e.g. "25 May 2026 14:00"
+      fmt_end   = format(end,   "%d %b %Y %H:%M")               # e.g. "26 May 2026 11:00"
+    )
+  })
+
+  # ── One-row-per-city summary frame ────────────────────────────────────────────
+  # Peak demand slot per city; used by the overview map and compare chart.
+  # Consumers call cities_max_bike() with parentheses.
+  cities_max_bike <- reactive({
+    city_weather_bike_df() %>%                                   # read latest weather frame
+      group_by(CITY_ASCII, LAT, LNG) %>%
+      summarise(
+        BIKE_PREDICTION       = max(BIKE_PREDICTION, na.rm = TRUE),               # peak slot demand
+        BIKE_PREDICTION_LEVEL = BIKE_PREDICTION_LEVEL[which.max(BIKE_PREDICTION)],# level at peak
+        LABEL                 = LABEL[which.max(BIKE_PREDICTION)],                 # map popup (short)
+        DETAILED_LABEL        = DETAILED_LABEL[which.max(BIKE_PREDICTION)],        # map popup (full)
+        .groups               = "drop"
+      )
+  })
 
   # ── Feed state + live station data ──────────────────────────────────────────
   # feed_state tracks per-city failure counts and display status.
@@ -221,31 +268,9 @@ shinyServer(function(input, output, session) {
     tagList(header, city_rows, footer)
   })
 
-  # Parse FORECASTDATETIME once globally so date range calculations work
-  city_weather_bike_df <- city_weather_bike_df %>%
-    mutate(FORECASTDATETIME_DT = as.POSIXct(FORECASTDATETIME,
-                                            format = "%Y-%m-%d %H:%M:%S",
-                                            tz = "UTC"))
-  
-  # Compute the actual forecast window from the data
-  # These drive the dynamic map header title
-  forecast_start <- min(city_weather_bike_df$FORECASTDATETIME_DT, na.rm = TRUE)
-  forecast_end   <- max(city_weather_bike_df$FORECASTDATETIME_DT, na.rm = TRUE)
-  
-  # Formatted date strings used in all titles — e.g. "22 Apr 2026 09:00"
-  fmt_start <- format(forecast_start, "%d %b %Y %H:%M")
-  fmt_end   <- format(forecast_end,   "%d %b %Y %H:%M")
-  
-  # One-row-per-city aggregated data for the overview map and compare chart
-  cities_max_bike <- city_weather_bike_df %>%
-    group_by(CITY_ASCII, LAT, LNG) %>%
-    summarise(
-      BIKE_PREDICTION       = max(BIKE_PREDICTION, na.rm = TRUE),
-      BIKE_PREDICTION_LEVEL = BIKE_PREDICTION_LEVEL[which.max(BIKE_PREDICTION)],
-      LABEL                 = LABEL[which.max(BIKE_PREDICTION)],
-      DETAILED_LABEL        = DETAILED_LABEL[which.max(BIKE_PREDICTION)],
-      .groups = "drop"
-    )
+
+  # city_weather_bike_df, forecast_window, and cities_max_bike are reactive
+  # expressions defined in the hourly weather block above.
   
   
   # ---------------------------------------------------------------------------
@@ -254,10 +279,11 @@ shinyServer(function(input, output, session) {
   # renderUI() lets us build HTML dynamically so the dates are live values,
   # not hardcoded strings. output$map_date_title fills the uiOutput() in ui.R.
   output$map_date_title <- renderUI({
+    w <- forecast_window()                                        # read current fmt_start / fmt_end
     tags$div(
       class = "map-title",
       tags$i(class = "glyphicon glyphicon-globe", style = "margin-right:7px;"),
-      paste0("24-Hour Bike Demand Forecast  \u2022  ", fmt_start, "  \u2192  ", fmt_end)
+      paste0("24-Hour Bike Demand Forecast  \u2022  ", w$fmt_start, "  \u2192  ", w$fmt_end)
     )
   })
   
@@ -296,7 +322,7 @@ shinyServer(function(input, output, session) {
     
     if (input$city_dropdown == "All") {
       
-      filtered <- cities_max_bike %>%
+      filtered <- cities_max_bike() %>%                          # () — reactive
         filter(BIKE_PREDICTION_LEVEL %in% active_levels())
       
       if (length(active_levels()) == 0 || nrow(filtered) == 0) {
@@ -322,7 +348,7 @@ shinyServer(function(input, output, session) {
       
     } else {
 
-      selected_city_coords <- cities_max_bike %>% filter(CITY_ASCII == input$city_dropdown)  # city centre for setView
+      selected_city_coords <- cities_max_bike() %>% filter(CITY_ASCII == input$city_dropdown)  # () — reactive; city centre
 
       # Filter live GBFS stations for the selected city; only show stations that are renting
       city_stations <- live_stations_df() %>%                              # () reads current reactiveVal
@@ -331,7 +357,7 @@ shinyServer(function(input, output, session) {
       if (nrow(city_stations) == 0) {
         # ── Fallback: GBFS unavailable for this city — show city-centre weather marker ──
         # This preserves the pre-Phase-7B behaviour for Seoul (no GBFS) and any failed fetch.
-        selected_city <- city_weather_bike_df %>% filter(CITY_ASCII == input$city_dropdown)
+        selected_city <- city_weather_bike_df() %>% filter(CITY_ASCII == input$city_dropdown)  # () — reactive
         leaflet(data = selected_city) %>%
           addTiles() %>%
           setView(lng  = selected_city_coords$LNG[1],
@@ -384,7 +410,7 @@ shinyServer(function(input, output, session) {
   # Build a horizontal bar chart comparing peak demand across all cities.
   # Colour-coded green/yellow/red to match the map markers.
   # Title and subtitle now reference the 24-hour window with actual dates.
-  build_compare_chart <- function(data) {
+  build_compare_chart <- function(data, fmt_start, fmt_end) {   # fmt_start/fmt_end passed by caller
     level_colours <- c("small" = "#43ac6a", "medium" = "#e99002", "large" = "#f04124")
     
     ggplot(data, aes(x    = reorder(CITY_ASCII, BIKE_PREDICTION),
@@ -414,7 +440,10 @@ shinyServer(function(input, output, session) {
       )
   }
   
-  output$city_compare_chart <- renderPlot({ build_compare_chart(cities_max_bike) })
+  output$city_compare_chart <- renderPlot({                      # rebuild when weather or city changes
+    w <- forecast_window()                                        # read current window strings
+    build_compare_chart(cities_max_bike(), w$fmt_start, w$fmt_end)
+  })
   
   observeEvent(input$expand_compare, {
     showModal(modalDialog(
@@ -429,12 +458,15 @@ shinyServer(function(input, output, session) {
       easyClose = TRUE
     ))
   })
-  output$city_compare_chart_modal <- renderPlot({ build_compare_chart(cities_max_bike) })
+  output$city_compare_chart_modal <- renderPlot({                # modal must stay in sync with sidebar
+    w <- forecast_window()                                        # read current window strings
+    build_compare_chart(cities_max_bike(), w$fmt_start, w$fmt_end)
+  })
   
   
   # City summary table — sorted highest demand first, with coloured level badges
   output$city_summary_table <- renderUI({
-    tbl <- cities_max_bike %>%
+    tbl <- cities_max_bike() %>%                                 # () — reactive
       arrange(desc(BIKE_PREDICTION)) %>%
       select(CITY_ASCII, BIKE_PREDICTION, BIKE_PREDICTION_LEVEL)
     
@@ -468,7 +500,7 @@ shinyServer(function(input, output, session) {
   # Prepare selected city data — already limited to 8 slots from the API.
   # FORECASTDATETIME_DT was parsed globally above; TIME_INDEX labels each slot.
   selected_city_data <- reactive({
-    city_weather_bike_df %>%
+    city_weather_bike_df() %>%                                     # () — reactive expression
       filter(CITY_ASCII == input$city_dropdown) %>%
       mutate(
         TIME_INDEX  = row_number(),
@@ -482,7 +514,7 @@ shinyServer(function(input, output, session) {
   # Each function returns a ggplot object reused for both sidebar and modal.
   # All titles and axis labels now reference "24 Hours" and show time (HH:MM).
   
-  build_temp_chart <- function(df) {
+  build_temp_chart <- function(df, fmt_start, fmt_end) {         # fmt_start/fmt_end passed by caller
     city <- unique(df$CITY_ASCII)[1]
     ggplot(df, aes(x = FORECASTDATETIME_DT, y = TEMPERATURE)) +
       geom_line(color = "#008cba", linewidth = 0.9) +
@@ -507,7 +539,7 @@ shinyServer(function(input, output, session) {
       )
   }
   
-  build_bike_chart <- function(df) {
+  build_bike_chart <- function(df, fmt_start, fmt_end) {         # fmt_start/fmt_end passed by caller
     city <- unique(df$CITY_ASCII)[1]
     ggplot(df, aes(x = FORECASTDATETIME_DT, y = BIKE_PREDICTION)) +
       geom_line(color = "#43ac6a", linewidth = 0.9) +
@@ -560,14 +592,16 @@ shinyServer(function(input, output, session) {
   # One reactive per chart. Both sidebar and modal renderPlots consume the same
   # reactive object — they are guaranteed to always show identical data.
 
-  temp_chart_obj <- reactive({                                       # temperature trend; invalidates on city change
+  temp_chart_obj <- reactive({                                       # temperature trend; invalidates on city/timer change
     req(input$city_dropdown != "All")
-    build_temp_chart(selected_city_data())
+    w <- forecast_window()                                           # read current window strings
+    build_temp_chart(selected_city_data(), w$fmt_start, w$fmt_end)  # pass fmt args explicitly
   })
 
-  bike_chart_obj <- reactive({                                       # bike demand forecast
+  bike_chart_obj <- reactive({                                       # bike demand forecast; invalidates on city/timer change
     req(input$city_dropdown != "All")
-    build_bike_chart(selected_city_data())
+    w <- forecast_window()                                           # read current window strings
+    build_bike_chart(selected_city_data(), w$fmt_start, w$fmt_end)  # pass fmt args explicitly
   })
 
   humidity_chart_obj <- reactive({                                   # humidity vs demand scatter
@@ -698,7 +732,7 @@ shinyServer(function(input, output, session) {
   # ── Reactives ────────────────────────────────────────────────────────────
 
   operator_city_data <- reactive({                                          # 8 forecast rows for selected operator city
-    city_weather_bike_df %>%                                                # full 5-city 24h forecast frame
+    city_weather_bike_df() %>%                                              # () — reactive; full 5-city 24h frame
       filter(CITY_ASCII == input$operator_city)                             # keep only the operator's chosen city
   })
 
@@ -862,7 +896,7 @@ shinyServer(function(input, output, session) {
 
   output$operator_map <- renderLeaflet({                                   # station heatmap: size = capacity, colour = fill rate
     stations    <- operator_stations()                                     # live stations for selected city
-    city_coords <- cities_max_bike %>%                                     # city centre row for setView
+    city_coords <- cities_max_bike() %>%                                   # () — reactive; city centre
       filter(CITY_ASCII == input$operator_city)
 
     centre_lng <- if (nrow(city_coords) > 0) city_coords$LNG[1] else 0   # fallback to 0,0 if city not in data
@@ -954,7 +988,7 @@ shinyServer(function(input, output, session) {
   # ── Reactives ────────────────────────────────────────────────────────────
 
   rider_city_data <- reactive({                                            # forecast rows for selected rider city
-    city_weather_bike_df %>%                                               # full 5-city 24h frame
+    city_weather_bike_df() %>%                                             # () — reactive; full 5-city 24h frame
       filter(CITY_ASCII == input$rider_city) %>%                          # filter to chosen city
       arrange(FORECASTDATETIME_DT)                                        # ensure chronological order
   })
@@ -1187,7 +1221,7 @@ shinyServer(function(input, output, session) {
 
   output$rider_map <- renderLeaflet({                                     # same colour logic as Live Map (Phase 7B)
     stations    <- rider_stations()
-    city_coords <- cities_max_bike %>% filter(CITY_ASCII == input$rider_city)
+    city_coords <- cities_max_bike() %>% filter(CITY_ASCII == input$rider_city)  # () — reactive
 
     centre_lng <- if (nrow(city_coords) > 0) city_coords$LNG[1] else 0
     centre_lat <- if (nrow(city_coords) > 0) city_coords$LAT[1] else 20
