@@ -11,8 +11,8 @@ Both repos form a single portfolio system. Track them together here.
 
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
-| **bike_demand_prediction** (this repo) | R Shiny dashboard | v1.5.0 shipped — testthat suite (36 tests / 62 assertions) + GitHub Actions CI; README polished | ✅ Done | `2e2c735` |
-| **bike-demand-ml-system** | Python FastAPI + ML training | v4.3.0 — Paris timezone fix + cross-city table alignment | ✅ Done | `ccfdf60` |
+| **bike_demand_prediction** (this repo) | R Shiny dashboard | v1.5.0 shipped — testthat suite + CI; v1.6.0 Sprint 1 (Workstream A) complete — GCP Stream tab now live via Cloud Run poller | ✅ Done | `9d5c70e` |
+| **bike-demand-ml-system** | Python FastAPI + ML training | v1.6.0 Sprint 1 shipped — `gbfs-poller` Cloud Run + `gbfs-poller-cron` Scheduler + BQ 7-day partitions; v4.3.0 was Paris tz fix; v4.4.0 drift monitoring in design | ✅ Done | `5d494f2` |
 
 ### Trained City Models (Python repo)
 
@@ -42,6 +42,7 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 | ~~5.6~~ | bike-demand-ml-system | ~~Paris timezone fix + Option B 2022 drop + cross-city table alignment~~ | ~~v4.3.0~~ | **✅ Shipped (2026-05-21)** |
 | ~~6~~ | bike-demand-ml-system | ~~4-city analogous timezone bug fix (Paris/Chicago/NYC/DC)~~ | ~~v4.3.0~~ | **✅ Scope shrunk to Paris-only after code inspection (NYC/DC/Chicago parse datetimes naively); shipped as Paris-only in v4.3.0** |
 | ~~7~~ | bike_demand_prediction | ~~Backlog — Seoul GBFS~~ | — | **✅ Integration shipped 2026-05-17 (commit `8682242`) on `sample` key; full-coverage upgrade demoted 2026-05-23 to runtime `.Renviron` config — see Shiny README "Optional — Seoul full-coverage upgrade"** |
+| ~~8.0~~ | bike-demand-ml-system + bike_demand_prediction | ~~v1.6.0 Sprint 1 — Cloud Run poller + BQ partitioning~~ | ~~v1.6.0~~ | **✅ Shipped 2026-05-25 — `gbfs-poller` Cloud Run + `gbfs-poller-cron` Scheduler live; BQ DAY-partitioned (7-day TTL); 6,032 rows confirmed across 4 cities in first cron window** |
 | **8** | bike_demand_prediction | Backlog — City expansion (SF/Amsterdam) | — | Data sourcing required |
 
 ---
@@ -128,17 +129,18 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 * Reactive logic in `server.R` and `ui.R` not yet covered — would require `shinytest2` browser harness (out of scope for v1.5; candidate for a future phase)
 * Seoul live-station coverage is sample-key-only by default — `parse_seoul_openapi()` ships and runs on the public `"sample"` key (5 real stations near Mapo-gu); full ~1,471-station coverage unlocks via `SEOUL_API_KEY` runtime config (see Shiny README "Optional — Seoul full-coverage upgrade")
 * `USE_FASTAPI` is env-var controlled — no in-app toggle (by design for Docker simplicity)
-* GCP Stream tab requires `GOOGLE_APPLICATION_CREDENTIALS` env var pointing to a GCP service account JSON — not configured by default; tab shows setup instructions when not set
+* GCP Stream tab requires `GOOGLE_APPLICATION_CREDENTIALS` env var pointing to a GCP service account JSON for local development — tab shows 3-step setup instructions when credential is not set. Production pipeline runs live via Cloud Run + Cloud Scheduler (v1.6.0 Sprint 1, shipped 2026-05-25)
 
 ---
 
 ## 🔜 Roadmap
 
-### Phase 7F — GCP Streaming Dashboard ✅ DONE (v1.2.0 — 2026-05-16)
+### Phase 7F — GCP Streaming Dashboard ✅ DONE (v1.2.0 — 2026-05-16; pipeline reactivated v1.6.0 Sprint 1 — 2026-05-25)
 * `shiny_app/bigquery_client.R` — `bq_auth_safe()`, `query_city_trend()`, `query_latest_snapshot()`
 * 4th "GCP Stream" tab in Shiny — live 5-min windowed avg/min/max bikes per city, auto-refresh every 5 min
 * bigrquery 1.6.2 + 22 deps added to `renv.lock` via `renv::record()`
 * Commits `9b1fd47` (code) + `1764b19` (renv.lock) pushed to origin/main
+* **v1.6.0 Sprint 1 pipeline reactivation (2026-05-25):** Dataflow path superseded by `gbfs-poller` FastAPI Cloud Run service + `gbfs-poller-cron` Cloud Scheduler (5-min cron, OIDC auth); BQ table recreated with DAY partitioning and 7-day TTL; 6,032 rows confirmed across all 4 cities in first automated window
 
 ### ✅ Backlog — Paris/Chicago models (v1.4.0) — SHIPPED 2026-05-18
 * Paris RF — Vélib' Métropole open data (2023–2024, 17,539 rows; 2022 dropped in v4.3.0 as a data-quality gate); RMSE 20.51; `artifacts/paris/`
@@ -179,6 +181,12 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 
 **v4.3.0 shipped (2026-05-21) — Paris timezone fix + Option B 2022 drop + cross-city table alignment in the ML repo.** Scope corrected mid-spec from the original "4-city analogous bug" framing to Paris-only after code inspection confirmed NYC/DC/Chicago parse trip + weather datetimes naively (no `tz_convert` calls). Paris RMSE 20.51 (down from 23.30, −12.0%); 2022 source export dropped as a data-quality gate after the verification gate found it peaked 2h later than 2023+2024 in both AM and PM rush across DST seasons (intrinsic to the provider's aggregation pipeline; reversible single block in `fetch_paris_weather.py`). Bundled cosmetic follow-ups: `train.py` ASCII stdout (em-dash → `--`) + MAE/MSE rows added to NYC + DC RF tables (full cross-city alignment with Seoul post-v4.2.0 format). Tracked follow-ups block now empty for the first time since pre-v4.2.0.
 
-**Next move (Python-side, downstream impact here):** Python `v4.4.0` in design phase (S1 complete 2026-05-23 — spec `dac2990` + plan `e8d26bb` committed; S2 next on Python side). v4.4.0 scope: weekly weather-feature drift monitor (`monitoring/` package + GitHub Actions cron; PSI per feature vs same-season training baseline; markdown report committed back to `main`) + bundled MLflow Paris + Chicago promotion to 6/6 (Dockerfile.training 2-line fix). **No Shiny code changes expected in v4.4.0** — drift monitor lives entirely in the Python repo; FastAPI `/predict` contract unchanged. Open Shiny-side candidates (independent of v4.4.0): (a) Shiny Phase 8 / v1.7 — `shinytest2` browser harness for `server.R` / `ui.R` reactives (new R toolchain, multi-session); (b) investigate Paris 2022 anomaly root cause upstream to potentially re-enable that 33% of data in a future Python v4.5+. Former Seoul live-station upgrade candidate demoted 2026-05-23 to runtime config (see Shiny README "Optional — Seoul full-coverage upgrade") — integration already shipped on `sample` key in commit `8682242`.
+**v1.6.0 Sprint 1 shipped (2026-05-25) — GCP Stream tab reactivated.** `gbfs-poller` Cloud Run service (FastAPI + uvicorn, `python:3.11-slim`, non-root) + `gbfs-poller-cron` Cloud Scheduler (5-min cron, OIDC auth, attempt-deadline 540 s) deployed to `us-central1`. BQ table recreated with DAY partitioning (7-day TTL); `6,032` rows confirmed across London / NYC / Paris / Chicago in first automated 05:50 UTC window. ML repo commit: `5d494f2`.
+
+**Sprint 2 (Workstream B — Shiny forecast freshness + honest demo):** Brainstorming → writing-plans → executing-plans cycle pending.
+
+**Sprint 3 (Workstream C — honest claims + meaningful comparisons):** Not yet started.
+
+**Python v4.4.0 drift monitor** in design phase (S1 complete 2026-05-23 — spec `dac2990` + plan `e8d26bb`; S2 next on Python side). No Shiny code changes expected — drift monitor lives entirely in the Python repo.
 
 Resume with: `"resume bike demand prediction project"`
