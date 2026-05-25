@@ -2,7 +2,7 @@
 # bigquery_client.R
 # Phase 7F — GCP Streaming Dashboard
 # Authenticates with BigQuery and queries bike_demand.station_snapshots,
-# the table written by the Dataflow GBFS streaming pipeline.
+# the table written by the Cloud Run GBFS poller (gbfs-poller Cloud Run service).
 #
 # BQ table: bike-demand-ml-system.bike_demand.station_snapshots
 # Schema  : city | station_id | station_name | window_start | window_end |

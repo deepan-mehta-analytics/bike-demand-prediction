@@ -683,7 +683,7 @@ shinyUI(
 
     # ══════════════════════════════════════════════════════════════════════════
     # GCP STREAM TAB (Phase 7F)
-    # Live station availability from BigQuery (written by Dataflow pipeline):
+    # Live station availability from BigQuery (written by Cloud Run GBFS poller):
     #   — Queries bike-demand-ml-system.bike_demand.station_snapshots
     #   — Time-series chart: avg bikes / station per 5-min window (last 2 hrs)
     #   — Shaded ribbon: min-to-max range across stations in each window
@@ -703,7 +703,7 @@ shinyUI(
                # ════════════════════════════════════════════════════════════════
                tags$div(class = "dash-left", style = "width:310px; min-width:310px;",
 
-                        # City selector — only cities the Dataflow pipeline publishes
+                        # City selector — only cities the Cloud Run GBFS poller publishes
                         tags$div(class = "dash-card",
                                  tags$h5("Select City"),
                                  selectInput(
@@ -716,7 +716,7 @@ shinyUI(
                                    style = "font-size:11px; color:#888; margin:4px 0 0;",
                                    tags$i(class="glyphicon glyphicon-info-sign",
                                           style="margin-right:3px; color:#008cba;"),
-                                   "Only cities polled by the Dataflow pipeline are available here.",
+                                   "Only cities polled by the Cloud Run GBFS poller are available here.",
                                    " Seoul and Paris are not in the GCP pipeline."
                                  )
                         ),
