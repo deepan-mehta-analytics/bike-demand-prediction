@@ -11,7 +11,7 @@ Both repos form a single portfolio system. Track them together here.
 
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
-| **bike_demand_prediction** (this repo) | R Shiny dashboard | v1.5.0 shipped — testthat suite + CI; v1.6.0 Sprint 1 (Workstream A) complete — GCP Stream tab now live via Cloud Run poller | ✅ Done | `9d5c70e` |
+| **bike_demand_prediction** (this repo) | R Shiny dashboard | v1.5.0 shipped — testthat suite + CI; v1.6.0 Sprint 1 (Workstream A) complete — GCP Stream tab now live via Cloud Run poller | ✅ Done | `feacd35` |
 | **bike-demand-ml-system** | Python FastAPI + ML training | v1.6.0 Sprint 1 shipped — `gbfs-poller` Cloud Run + `gbfs-poller-cron` Scheduler + BQ 7-day partitions; v4.3.0 was Paris tz fix; v4.4.0 drift monitoring in design | ✅ Done | `5d494f2` |
 
 ### Trained City Models (Python repo)
