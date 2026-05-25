@@ -576,7 +576,7 @@ generate_demo_weather_data <- function() {
   # ── Apply diurnal temperature/humidity variation ──────────────────────────────
   # Replaces the city-constant TEMPERATURE and HUMIDITY from city_params with
   # slot-varying sinusoids so the chart shows a realistic curve instead of a flat line.
-  # TEMPERATURE peaks ~14:00 UTC, troughs ~02:00 UTC, amplitude ±5 °C.
+  # TEMPERATURE peaks ~12:00 UTC (noon), troughs ~00:00 UTC (midnight), amplitude ±5 °C.
   # HUMIDITY inversely correlated, amplitude ±8 pp, bounded to 35–95 %.
   # HOURS is already an integer 0-23 column in df from the slots tibble.
   df <- df %>%
