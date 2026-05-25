@@ -573,6 +573,19 @@ generate_demo_weather_data <- function() {
   # ── Cross-join: 6 cities × 8 slots = 48 rows ────────────────────────────────
   df <- cross_join(city_params, slots)                                # every city paired with every slot
 
+  # ── Apply diurnal temperature/humidity variation ──────────────────────────────
+  # Replaces the city-constant TEMPERATURE and HUMIDITY from city_params with
+  # slot-varying sinusoids so the chart shows a realistic curve instead of a flat line.
+  # TEMPERATURE peaks ~14:00 UTC, troughs ~02:00 UTC, amplitude ±5 °C.
+  # HUMIDITY inversely correlated, amplitude ±8 pp, bounded to 35–95 %.
+  # HOURS is already an integer 0-23 column in df from the slots tibble.
+  df <- df %>%
+    mutate(
+      TEMPERATURE = TEMPERATURE + 5 * sin((as.numeric(HOURS) - 6) * pi / 12),   # diurnal cycle
+      HUMIDITY    = pmin(95L, pmax(35L, HUMIDITY + as.integer(                   # inverse, bounded
+                      round(-8 * sin((as.numeric(HOURS) - 6) * pi / 12)))))
+    )
+
   # ── Bike demand prediction + HTML popup labels ───────────────────────────────
   df %>%
     mutate(

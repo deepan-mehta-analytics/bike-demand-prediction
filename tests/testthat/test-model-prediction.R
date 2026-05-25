@@ -130,3 +130,9 @@ test_that("generate_demo_weather_data: schema and prediction values are valid", 
   expect_true(all(result$BIKE_PREDICTION >= 0L))               # no negative predictions
   expect_true(all(result$BIKE_PREDICTION_LEVEL %in% c("small", "medium", "large")))  # valid levels only
 })
+
+test_that("generate_demo_weather_data: TEMPERATURE varies across slots within a city", {
+  result      <- suppressMessages(generate_demo_weather_data())          # 6 cities x 8 forecast slots
+  paris_temps <- result$TEMPERATURE[result$CITY_ASCII == "Paris"]        # 8 temperature values for Paris
+  expect_gt(length(unique(paris_temps)), 1L)                             # must not all be identical
+})
