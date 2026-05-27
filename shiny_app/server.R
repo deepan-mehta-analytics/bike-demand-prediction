@@ -588,14 +588,13 @@ shinyServer(function(input, output, session) {
     city <- unique(df$CITY_ASCII)[1]
     ggplot(df, aes(x = HUMIDITY, y = BIKE_PREDICTION)) +
       geom_point(color = "#004e7c", alpha = 0.8, size = 3.5) +
-      geom_smooth(method  = "lm",
-                  formula = y ~ poly(x, 4),
+      geom_smooth(method  = "lm",                                           # C2: linear; 8 points don't support poly(4)
                   color   = "red",
                   fill    = "lightpink",
                   alpha   = 0.3) +
       labs(
         title    = paste("Humidity vs Demand \u2014", city),
-        subtitle = "24-Hour forecast window",
+        subtitle = "Linear trend across 8 forecast slots",                   # C2: subtitle reflects fit honestly
         x        = "Humidity (%)",
         y        = "Predicted Bikes"
       ) +
