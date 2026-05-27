@@ -16,7 +16,7 @@ if (!require(scales))    install.packages("scales")
 source("model_prediction.R")    # weather API + linear regression model
 source("gbfs_client.R")         # live GBFS station availability client (Phase 7B)
 source("bigquery_client.R")     # BigQuery auth + trend/snapshot queries (Phase 7F)
-source("server_helpers.R")      # B3 + C1 + C3 + C5: pure helpers (build_data_source_footer, build_data_source_subtitle_line, build_engine_subtitle_line, compute_operator_alert_level, count_unique_cities)
+source("server_helpers.R")      # B3 + C1 + C3 + C5 + C6: pure helpers (build_data_source_footer, build_data_source_subtitle_line, build_engine_subtitle_line, compute_operator_alert_level, count_unique_cities, build_csv_filename, build_csv_header_block)
 
 # ── C5: Operator alert thresholds (tune after one week of live observation) ──
 OP_ALERT_RED_ZERO_PCT    <- 0.25                                            # red:   ≥25% stations empty
@@ -1005,21 +1005,27 @@ shinyServer(function(input, output, session) {
 
   # ── 24-hour forecast CSV download ─────────────────────────────────────────
 
-  output$download_forecast <- downloadHandler(                             # triggers on "Download 24h CSV" button click
-    filename = function() {                                                # dynamic filename: city + date
-      paste0(
-        "bikecast_",
-        tolower(gsub(" ", "_", input$operator_city)),                     # e.g. "new_york"
-        "_forecast_",
-        format(Sys.Date(), "%Y%m%d"),                                     # e.g. "20260507"
-        ".csv"
-      )
+  output$download_forecast <- downloadHandler(                              # C6: timestamped filename + metadata header
+    filename = function() {
+      build_csv_filename(input$operator_city, Sys.time())                   # helper: UTC-stamped slug
     },
-    content = function(file) {                                            # write operationally relevant columns to CSV
-      operator_city_data() %>%                                            # 8 forecast slots for selected city
-        select(CITY_ASCII, FORECASTDATETIME, TEMPERATURE, HUMIDITY,       # weather context
-               WIND_SPEED, BIKE_PREDICTION, BIKE_PREDICTION_LEVEL) %>%   # demand forecast columns
-        write.csv(file, row.names = FALSE)                                # standard CSV; no row index column
+    content = function(file) {
+      df <- operator_city_data()                                            # 8 forecast slots for selected city
+      src <- if (nrow(df) > 0L && "data_source" %in% colnames(df)) df$data_source[1] else "unknown"  # T1 column
+      w   <- forecast_window()                                              # reactive window strings
+      header <- build_csv_header_block(                                     # helper: 4 commented lines
+        city        = input$operator_city,
+        source      = src,
+        fmt_start   = w$fmt_start,
+        fmt_end     = w$fmt_end,
+        exported_at = Sys.time()
+      )
+      writeLines(header, con = file)                                        # write 4 header lines first
+      df %>%                                                                # then append CSV body
+        select(CITY_ASCII, FORECASTDATETIME, TEMPERATURE, HUMIDITY,
+               WIND_SPEED, BIKE_PREDICTION, BIKE_PREDICTION_LEVEL) %>%
+        write.table(file, sep = ",", row.names = FALSE,                    # append; CSV column header row included
+                    append = TRUE, col.names = TRUE)
     }
   )
 

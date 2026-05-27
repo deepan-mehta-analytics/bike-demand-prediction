@@ -77,3 +77,23 @@ count_unique_cities <- function(df) {                                        # u
 # Forecast horizon is genuinely fixed: OpenWeather 5-day/3-hour API yields
 # 8 slots × 3 hours = 24 hours. Documented as a string for direct render.
 FORECAST_HOURS_CONSTANT <- "24"
+
+# ── C6: CSV download helpers ─────────────────────────────────────────────────
+# Filename pattern: bike-demand-forecast-<city-slug>-<YYYYMMDD-HHMM>.csv (UTC)
+build_csv_filename <- function(city, exported_at) {
+  slug <- tolower(gsub("\\s+", "-", trimws(city)))                          # "Washington DC" → "washington-dc"
+  stamp <- format(exported_at, "%Y%m%d-%H%M", tz = "UTC")                   # UTC timestamp YYYYMMDD-HHMM
+  sprintf("bike-demand-forecast-%s-%s.csv", slug, stamp)                    # assemble final filename
+}
+
+# Header block: 4 commented lines prepended to CSV body
+build_csv_header_block <- function(city, source, fmt_start, fmt_end, exported_at) {
+  paste(
+    sprintf("# Bike Demand 24h Forecast — exported %s UTC",
+            format(exported_at, "%Y-%m-%d %H:%M", tz = "UTC")),            # line 1: ISO date + HH:MM UTC
+    sprintf("# City: %s", city),                                            # line 2: city name verbatim
+    sprintf("# Source: %s", source),                                        # line 3: data source label (live or demo)
+    sprintf("# Forecast horizon: %s -> %s", fmt_start, fmt_end),            # line 4: horizon window arrow notation
+    sep = "\n"                                                              # newline-separated, no trailing newline
+  )
+}
