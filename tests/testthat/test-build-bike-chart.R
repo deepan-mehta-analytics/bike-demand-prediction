@@ -2,7 +2,7 @@ library(testthat)                                                               
 library(withr)                                                                  # env-var isolation without leaking state
 library(rprojroot)                                                              # portable project root detection
 
-proj_root <- find_root(has_file("renv.lock"))                                   # walk up to repo root (renv.lock is the anchor)
+proj_root <- find_root(is_git_root)                                             # walk to .git boundary (canonical anchor per helper-workdir.R)
 setwd(file.path(proj_root, "shiny_app"))                                        # server_helpers.R lives in shiny_app/
 
 source("server_helpers.R")                                                      # provides build_engine_subtitle_line() (added in C1)

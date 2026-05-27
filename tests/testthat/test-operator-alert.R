@@ -1,6 +1,6 @@
 library(testthat)                                                           # testthat testing framework
 library(rprojroot)                                                          # project root detection
-proj_root <- find_root(has_file("renv.lock"))                               # walk up until renv.lock is found
+proj_root <- find_root(is_git_root)                                         # walk to .git boundary (canonical anchor per helper-workdir.R)
 setwd(file.path(proj_root, "shiny_app"))                                    # change to shiny_app/ so source() paths resolve
 
 source("server_helpers.R")                                                  # helper module from Task 1

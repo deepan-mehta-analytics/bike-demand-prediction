@@ -58,7 +58,9 @@ compute_operator_alert_level <- function(n_stations, n_empty_stations,
 }
 
 # ── C1: Engine indicator line for bike-demand chart subtitle ─────────────────
-# Reads USE_FASTAPI env var; returns appropriate engine label. No RMSE in UI.
+# Reads USE_FASTAPI at call time (chart-render time). The env var is set at
+# container/process start so the value is stable across renders. No RMSE in UI.
+# Tests must use withr::with_envvar() to override the value per-test.
 build_engine_subtitle_line <- function() {
   if (identical(Sys.getenv("USE_FASTAPI", unset = "false"), "true")) {     # exact-match "true" only; anything else → local
     return("Engine: FastAPI Random Forest")                                 # FastAPI path: model served via Cloud Run
