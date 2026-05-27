@@ -45,10 +45,11 @@ test_that("calculate_bike_prediction_level: value in top tertile of spread is la
   expect_equal(result[5], "large")                               # 5000 is in the top tertile
 })
 
-test_that("calculate_bike_prediction_level: vectorised input returns correct-length result", {
-  result <- calculate_bike_prediction_level(c(0, 500, 1001, 2000, 5000))  # 5-element spread
+test_that("calculate_bike_prediction_level: vectorised input returns exact tertile labels", {
+  result <- calculate_bike_prediction_level(c(0, 500, 1001, 2000, 5000))  # q33≈680, q67≈1602 over this set
   expect_length(result, 5L)                                      # one output per input element
-  expect_true(all(result %in% c("small", "medium", "large")))   # only valid level labels
+  expect_equal(result,                                            # exact per-position contract: catches mis-bucketing
+               c("small", "small", "medium", "large", "large"))  # 0,500 ≤ q33; 1001 ≤ q67; 2000,5000 > q67
 })
 
 

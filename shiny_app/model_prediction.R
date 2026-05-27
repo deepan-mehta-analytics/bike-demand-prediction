@@ -442,11 +442,14 @@ predict_bike_demand_fastapi <- function(FORECASTDATETIME, TEMPERATURE, HUMIDITY,
 # -----------------------------------------------------------------------------
 # SECTION 6 — calculate_bike_prediction_level()
 # -----------------------------------------------------------------------------
-# Takes the numeric bike predictions and bins them into three named levels.
-# These levels are used to colour-code the map markers (green / yellow / red).
+# Classifies each prediction into a tertile-based demand level.
+# Thresholds (33rd and 67th percentiles) are computed from the input vector
+# itself, so the function MUST be called inside group_by(CITY_ASCII) %>%
+# mutate(...) to ensure each city gets its own local thresholds.
+# Used to colour-code the map markers (green / yellow / red).
 #
-# Argument:  predictions — integer vector of predicted bike counts
-# Returns:   character vector of "small", "medium", or "large"
+# Argument:  predictions — numeric vector of predicted bike counts (one city's slots)
+# Returns:   character vector of "small", "medium", or "large"; NA passes through
 
 calculate_bike_prediction_level <- function(predictions) {                  # C4: per-group tertile split
   q33 <- quantile(predictions, 0.33, na.rm = TRUE)                          # 33rd percentile of input
