@@ -334,11 +334,11 @@ shinyUI(
                                  tags$h5("Coverage"),
                                  tags$div(class = "stat-row",
                                           tags$div(class = "stat-box stat-cities",
-                                                   tags$div(class = "stat-num", "6"),
+                                                   tags$div(class = "stat-num", textOutput("stat_cities", inline = TRUE)),  # C3: derived
                                                    tags$div(class = "stat-lbl", "Cities")
                                           ),
                                           tags$div(class = "stat-box stat-days",
-                                                   tags$div(class = "stat-num", "24"),
+                                                   tags$div(class = "stat-num", textOutput("stat_hours", inline = TRUE)),  # C3: documented constant
                                                    tags$div(class = "stat-lbl", "Hr Forecast")
                                           )
                                  )

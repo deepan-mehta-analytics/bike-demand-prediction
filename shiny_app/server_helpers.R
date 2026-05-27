@@ -67,3 +67,13 @@ build_engine_subtitle_line <- function() {
   }
   "Engine: Local linear regression"                                         # default: model.csv IBM linear regression
 }
+
+# ── C3: Stat-card helpers — derived city count + documented forecast horizon ──
+count_unique_cities <- function(df) {                                        # used by renderText for stat_cities
+  if (nrow(df) == 0L) return(0L)                                             # empty df → 0 cities
+  length(unique(df$CITY_ASCII))                                              # unique city count
+}
+
+# Forecast horizon is genuinely fixed: OpenWeather 5-day/3-hour API yields
+# 8 slots × 3 hours = 24 hours. Documented as a string for direct render.
+FORECAST_HOURS_CONSTANT <- "24"

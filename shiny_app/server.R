@@ -16,7 +16,7 @@ if (!require(scales))    install.packages("scales")
 source("model_prediction.R")    # weather API + linear regression model
 source("gbfs_client.R")         # live GBFS station availability client (Phase 7B)
 source("bigquery_client.R")     # BigQuery auth + trend/snapshot queries (Phase 7F)
-source("server_helpers.R")      # B3 + C1 + C5: pure helpers (build_data_source_footer, build_data_source_subtitle_line, build_engine_subtitle_line, compute_operator_alert_level)
+source("server_helpers.R")      # B3 + C1 + C3 + C5: pure helpers (build_data_source_footer, build_data_source_subtitle_line, build_engine_subtitle_line, compute_operator_alert_level, count_unique_cities)
 
 # ── C5: Operator alert thresholds (tune after one week of live observation) ──
 OP_ALERT_RED_ZERO_PCT    <- 0.25                                            # red:   ≥25% stations empty
@@ -151,6 +151,10 @@ shinyServer(function(input, output, session) {
     df <- city_weather_bike_df()                                             # () — reactive; re-runs on weather refresh
     HTML(build_data_source_footer(df))                                       # HTML() safe: helper returns plain text
   })
+
+  # ── C3: Stat-card derived counts ────────────────────────────────────────────
+  output$stat_cities <- renderText({ count_unique_cities(city_weather_bike_df()) })  # data-driven city count
+  output$stat_hours  <- renderText({ FORECAST_HOURS_CONSTANT })                       # documented constant 24
 
   # ── Forecast window strings ───────────────────────────────────────────────────
   # Returns a named list: list(fmt_start = "...", fmt_end = "...").
