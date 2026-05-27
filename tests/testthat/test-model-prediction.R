@@ -23,28 +23,32 @@ test_that("safe_val: non-NULL value passes through unchanged", {
 # ── calculate_bike_prediction_level() ────────────────────────────────────────
 
 test_that("calculate_bike_prediction_level: 0 is small", {
-  expect_equal(calculate_bike_prediction_level(0), "small")   # floor boundary
+  expect_equal(calculate_bike_prediction_level(0), "small")     # single-value: q33==q67==0; 0<=q33 → small
 })
 
-test_that("calculate_bike_prediction_level: 1000 is small (inclusive upper bound)", {
-  expect_equal(calculate_bike_prediction_level(1000), "small") # inclusive: 0-1000 = small
+test_that("calculate_bike_prediction_level: 1000 is small (single-value degenerate)", {
+  expect_equal(calculate_bike_prediction_level(1000), "small")  # single-value: q33==q67==1000; 1000<=q33 → small
 })
 
-test_that("calculate_bike_prediction_level: 1001 is medium", {
-  expect_equal(calculate_bike_prediction_level(1001), "medium") # first medium value
+test_that("calculate_bike_prediction_level: value in lower tertile of spread is small", {
+  result <- calculate_bike_prediction_level(c(0, 500, 1001, 2000, 5000))  # q33≈660, so 500 <= q33
+  expect_equal(result[2], "small")                               # 500 is in the bottom tertile
 })
 
-test_that("calculate_bike_prediction_level: 2999 is medium", {
-  expect_equal(calculate_bike_prediction_level(2999), "medium") # last medium value
+test_that("calculate_bike_prediction_level: value in middle tertile of spread is medium", {
+  result <- calculate_bike_prediction_level(c(0, 500, 1001, 2000, 5000))  # q33≈660, q67≈1680
+  expect_equal(result[3], "medium")                              # 1001 falls between q33 and q67
 })
 
-test_that("calculate_bike_prediction_level: 3000 is large", {
-  expect_equal(calculate_bike_prediction_level(3000), "large")  # first large value
+test_that("calculate_bike_prediction_level: value in top tertile of spread is large", {
+  result <- calculate_bike_prediction_level(c(0, 500, 1001, 2000, 5000))  # q67≈1680, so 5000 > q67
+  expect_equal(result[5], "large")                               # 5000 is in the top tertile
 })
 
 test_that("calculate_bike_prediction_level: vectorised input returns correct-length result", {
-  result <- calculate_bike_prediction_level(c(0, 1500, 5000))  # one from each bucket
-  expect_equal(result, c("small", "medium", "large"))           # preserves order and length
+  result <- calculate_bike_prediction_level(c(0, 500, 1001, 2000, 5000))  # 5-element spread
+  expect_length(result, 5L)                                      # one output per input element
+  expect_true(all(result %in% c("small", "medium", "large")))   # only valid level labels
 })
 
 
@@ -144,4 +148,31 @@ test_that("generate_demo_weather_data adds data_source = 'demo_fallback' to ever
   df <- suppressMessages(generate_demo_weather_data())                   # run demo generator
   expect_true("data_source" %in% colnames(df))                          # column must exist
   expect_true(all(df$data_source == "demo_fallback"))                    # every row must carry the fallback label
+})
+
+# ── C4: per-city quantile thresholds ─────────────────────────────────────────
+
+test_that("calculate_bike_prediction_level returns 3 small / 2 medium / 3 large on linear 1..8", {
+  out <- calculate_bike_prediction_level(1:8)                              # R default type=7 quantile
+  expect_equal(sum(out == "small"),  3L)                                   # q33 = 3.31 → {1,2,3}
+  expect_equal(sum(out == "medium"), 2L)                                   # (3.31, 5.69] → {4,5}
+  expect_equal(sum(out == "large"),  3L)                                   # > 5.69 → {6,7,8}
+})
+
+test_that("calculate_bike_prediction_level is monotonically non-decreasing across sorted input", {
+  out   <- calculate_bike_prediction_level(1:8)
+  order <- c("small" = 1L, "medium" = 2L, "large" = 3L)                    # rank levels
+  ranks <- order[out]
+  expect_true(all(diff(ranks) >= 0L))                                       # no rank ever drops as inputs rise
+})
+
+test_that("calculate_bike_prediction_level returns all-small when all predictions equal (degenerate quantile)", {
+  out <- calculate_bike_prediction_level(rep(500, 8))                      # all equal → q33 == q67 == 500
+  expect_true(all(out == "small"))                                          # all values <= q33 by definition
+})
+
+test_that("calculate_bike_prediction_level handles NA gracefully", {
+  out <- calculate_bike_prediction_level(c(1:7, NA))                       # one NA
+  expect_equal(length(out), 8L)                                             # one output per input
+  expect_true(is.na(out[8]))                                                # NA in → NA out
 })

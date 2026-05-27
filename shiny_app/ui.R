@@ -349,15 +349,15 @@ shinyUI(
                                  tags$h5("Demand Level"),
                                  tags$div(class = "legend-row",
                                           tags$div(class = "legend-dot dot-green"),
-                                          tags$div(tags$strong("Low"), " — peak < 1,000 bikes / 3h slot")
+                                          tags$div(tags$strong("Low"), " — bottom third of this city's 24h forecast")
                                  ),
                                  tags$div(class = "legend-row",
                                           tags$div(class = "legend-dot dot-yellow"),
-                                          tags$div(tags$strong("Medium"), " — peak 1,000 – 3,000 bikes")
+                                          tags$div(tags$strong("Medium"), " — middle third of this city's 24h forecast")
                                  ),
                                  tags$div(class = "legend-row",
                                           tags$div(class = "legend-dot dot-red"),
-                                          tags$div(tags$strong("High"), " — peak > 3,000 bikes / 3h slot")
+                                          tags$div(tags$strong("High"), " — top third of this city's 24h forecast")
                                  )
                         ),
                         

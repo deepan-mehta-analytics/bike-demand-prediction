@@ -448,17 +448,15 @@ predict_bike_demand_fastapi <- function(FORECASTDATETIME, TEMPERATURE, HUMIDITY,
 # Argument:  predictions — integer vector of predicted bike counts
 # Returns:   character vector of "small", "medium", or "large"
 
-calculate_bike_prediction_level <- function(predictions) {
-  
-  levels <- c()   # Empty vector to collect the level label for each prediction
-  
-  for (prediction in predictions) {
-    if      (prediction >= 0    && prediction <= 1000) levels <- c(levels, 'small')   # Green marker
-    else if (prediction >  1000 && prediction <  3000) levels <- c(levels, 'medium')  # Yellow marker
-    else                                               levels <- c(levels, 'large')   # Red marker
-  }
-  
-  return(levels)
+calculate_bike_prediction_level <- function(predictions) {                  # C4: per-group tertile split
+  q33 <- quantile(predictions, 0.33, na.rm = TRUE)                          # 33rd percentile of input
+  q67 <- quantile(predictions, 0.67, na.rm = TRUE)                          # 67th percentile of input
+  dplyr::case_when(                                                         # vectorised; preserves NA
+    is.na(predictions)     ~ NA_character_,                                 # NA in → NA out
+    predictions <= q33     ~ "small",                                       # bottom tertile
+    predictions <= q67     ~ "medium",                                      # middle tertile
+    TRUE                   ~ "large"                                        # top tertile
+  )
 }
 
 
@@ -500,13 +498,17 @@ generate_city_weather_bike_data <- function() {
         ))
       }) %>%
       ungroup() %>%                                     # remove grouping so downstream code sees a flat data frame
-      mutate(BIKE_PREDICTION_LEVEL = calculate_bike_prediction_level(BIKE_PREDICTION))
+      group_by(CITY_ASCII) %>%                          # C4: regroup so tertiles are city-local
+      mutate(BIKE_PREDICTION_LEVEL = calculate_bike_prediction_level(BIKE_PREDICTION)) %>%
+      ungroup()                                         # flatten back to a plain data frame for the join
   } else {
     results <- weather_df %>%                           # local model.csv fallback path
       mutate(BIKE_PREDICTION = predict_bike_demand(
         TEMPERATURE, HUMIDITY, WIND_SPEED, VISIBILITY, SEASONS, HOURS
       )) %>%
-      mutate(BIKE_PREDICTION_LEVEL = calculate_bike_prediction_level(BIKE_PREDICTION))
+      group_by(CITY_ASCII) %>%                          # C4: city-local quantiles
+      mutate(BIKE_PREDICTION_LEVEL = calculate_bike_prediction_level(BIKE_PREDICTION)) %>%
+      ungroup()                                         # flatten back to a plain data frame for the join
   }
   
   # Join the city coordinates (LAT, LNG) from cities_df back onto the results.
@@ -590,6 +592,7 @@ generate_demo_weather_data <- function() {
 
   # ── Bike demand prediction + HTML popup labels ───────────────────────────────
   df %>%
+    group_by(CITY_ASCII) %>%                                                # C4: city-local quantiles for demo path too
     mutate(
       BIKE_PREDICTION       = predict_bike_demand(                    # model.csv linear regression
         TEMPERATURE, HUMIDITY, WIND_SPEED, VISIBILITY, SEASONS, HOURS
@@ -607,9 +610,10 @@ generate_demo_weather_data <- function() {
         "Humidity: ",    HUMIDITY,    " % </br>",
         "Wind Speed: ",  WIND_SPEED,  " m/s </br>",
         "Datetime: ",    FORECASTDATETIME, " </br>"
-      ),
-      data_source           = "demo_fallback"                         # B3: honest demo-path source label
+      )
     ) %>%
+    ungroup() %>%                                                           # flatten before appending source label
+    mutate(data_source = "demo_fallback") %>%                               # B3: honest demo-path source label
     select(                                                            # keep only columns server.R expects
       CITY_ASCII, LNG, LAT,
       TEMPERATURE, HUMIDITY,
