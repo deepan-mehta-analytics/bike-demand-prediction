@@ -125,14 +125,14 @@ test_that("generate_demo_weather_data: returns exactly 48 rows", {
 
 test_that("generate_demo_weather_data: schema and prediction values are valid", {
   result <- suppressMessages(generate_demo_weather_data())
-  expected_cols <- c(                                          # columns server.R expects
+  expected_cols <- c(                                          # columns server.R + download handler expect
     "CITY_ASCII", "LNG", "LAT",
-    "TEMPERATURE", "HUMIDITY",
+    "TEMPERATURE", "HUMIDITY", "WIND_SPEED",                   # T7 follow-up: WIND_SPEED needed by CSV download
     "BIKE_PREDICTION", "BIKE_PREDICTION_LEVEL",
     "LABEL", "DETAILED_LABEL", "FORECASTDATETIME",
     "data_source"                                              # B3: source label column added
   )
-  expect_equal(names(result), expected_cols)                   # schema must match server.R contract
+  expect_equal(names(result), expected_cols)                   # schema must match server.R + download contract
   expect_true(all(result$BIKE_PREDICTION >= 0L))               # no negative predictions
   expect_true(all(result$BIKE_PREDICTION_LEVEL %in% c("small", "medium", "large")))  # valid levels only
 })

@@ -526,6 +526,7 @@ generate_city_weather_bike_data <- function() {
       LNG, LAT,             # Coordinates (used to place markers on the map)
       TEMPERATURE,           # Temperature for display in the popup
       HUMIDITY,              # Humidity for display in the popup
+      WIND_SPEED,            # T7 follow-up: needed by CSV export (operationally relevant)
       BIKE_PREDICTION,       # Predicted number of bikes needed
       BIKE_PREDICTION_LEVEL, # "small", "medium", or "large" (controls marker colour)
       LABEL,                 # Short HTML popup for the overview map
@@ -617,9 +618,9 @@ generate_demo_weather_data <- function() {
     ) %>%
     ungroup() %>%                                                           # flatten before appending source label
     mutate(data_source = "demo_fallback") %>%                               # B3: honest demo-path source label
-    select(                                                            # keep only columns server.R expects
+    select(                                                            # keep columns server.R + download handler expect
       CITY_ASCII, LNG, LAT,
-      TEMPERATURE, HUMIDITY,
+      TEMPERATURE, HUMIDITY, WIND_SPEED,                                # T7 follow-up: WIND_SPEED kept for CSV export
       BIKE_PREDICTION, BIKE_PREDICTION_LEVEL,
       LABEL, DETAILED_LABEL,
       FORECASTDATETIME,
