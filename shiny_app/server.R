@@ -16,7 +16,7 @@ if (!require(scales))    install.packages("scales")
 source("model_prediction.R")    # weather API + linear regression model
 source("gbfs_client.R")         # live GBFS station availability client (Phase 7B)
 source("bigquery_client.R")     # BigQuery auth + trend/snapshot queries (Phase 7F)
-source("server_helpers.R")      # B3: pure helpers (build_data_source_footer, build_data_source_subtitle_line)
+source("server_helpers.R")      # B3 + C5: pure helpers (build_data_source_footer, build_data_source_subtitle_line, compute_operator_alert_level)
 
 # ── C5: Operator alert thresholds (tune after one week of live observation) ──
 OP_ALERT_RED_ZERO_PCT    <- 0.25                                            # red:   ≥25% stations empty
@@ -825,15 +825,24 @@ shinyServer(function(input, output, session) {
       amber_pct = OP_ALERT_AMBER_ZERO_PCT,
       fill_pct  = OP_ALERT_AMBER_FILL_PCT
     )
-    if (alert_level == "red") {                                             # critical: ≥25% stations empty
+    if (alert_level == "red") {                                             # critical: ≥25% stations empty OR no capacity data
       panel_class <- "panel-danger"
       icon_glyph  <- "glyphicon-warning-sign"
-      alert_title <- "Critical Supply Shortage"
-      alert_body  <- paste0(
-        round(empty / n * 100), "% of stations (", empty, " of ", n,
-        ") have zero bikes. Immediate rebalancing required. ",
-        "24h peak demand forecast: ", scales::comma(peak), " bikes — for capacity planning context."
-      )
+      if (total_capacity == 0L) {                                            # T3 follow-up I1: data-quality variant
+        alert_title <- "Fleet Capacity Data Unavailable"
+        alert_body  <- paste0(
+          "GBFS feed reports ", n, " stations but no dock capacity data. ",
+          "Verify feed health before acting. ",
+          "24h peak demand forecast: ", scales::comma(peak), " bikes — for capacity planning context."
+        )
+      } else {                                                                # normal red: many empty stations
+        alert_title <- "Critical Supply Shortage"
+        alert_body  <- paste0(
+          round(empty / n * 100), "% of stations (", empty, " of ", n,
+          ") have zero bikes. Immediate rebalancing required. ",
+          "24h peak demand forecast: ", scales::comma(peak), " bikes — for capacity planning context."
+        )
+      }
     } else if (alert_level == "amber") {                                    # warning: ≥10% empty OR <20% fill
       panel_class <- "panel-warning"
       icon_glyph  <- "glyphicon-exclamation-sign"

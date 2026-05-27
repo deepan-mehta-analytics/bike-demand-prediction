@@ -62,3 +62,9 @@ test_that("handles zero capacity edge case without divide-by-zero", {
                                        RED_PCT, AMBER_PCT, FILL_PCT)
   expect_equal(out, "red")                                                  # no fleet → critical by convention
 })
+
+test_that("returns 'red' when stations exist but total_capacity is zero (data-quality variant)", {
+  out <- compute_operator_alert_level(10L, 0L, 50L, 0L,                     # stations report but capacity missing
+                                       RED_PCT, AMBER_PCT, FILL_PCT)
+  expect_equal(out, "red")                                                  # server.R red branch routes to data-quality body
+})
