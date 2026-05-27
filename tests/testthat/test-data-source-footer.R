@@ -43,6 +43,19 @@ test_that("build_data_source_footer reports all-demo message when no cities live
   expect_match(out, "OPENWEATHER_KEY not set")                             # actionable user hint
 })
 
+test_that("build_data_source_footer returns safe default for empty input df (startup race)", {
+  df <- data.frame(CITY_ASCII = character(0), data_source = character(0))  # empty schema
+  out <- build_data_source_footer(df)                                       # reactive fires pre-load
+  expect_equal(out, "Powered by OpenWeather API")                           # safe default; no crash
+})
+
+test_that("build_data_source_footer warns and degrades when data_source column missing", {
+  df <- data.frame(CITY_ASCII = c("Seoul", "London"))                       # contract violation: no data_source col
+  expect_warning(out <- build_data_source_footer(df),                       # warning fires for debugging
+                 "data_source.*column missing")
+  expect_equal(out, "Powered by OpenWeather API")                           # safe UI default despite warning
+})
+
 # ── build_data_source_subtitle_line() ────────────────────────────────────────
 
 test_that("build_data_source_subtitle_line returns timestamped OpenWeather line for live source", {
@@ -55,4 +68,14 @@ test_that("build_data_source_subtitle_line returns demo hint for fallback source
   out <- build_data_source_subtitle_line("demo_fallback", Sys.time())      # time arg ignored for demo
   expect_match(out, "Demo fallback")                                       # source label
   expect_match(out, "OPENWEATHER_KEY")                                     # env var name in actionable hint
+})
+
+test_that("build_data_source_subtitle_line degrades gracefully for NA src", {
+  out <- build_data_source_subtitle_line(NA_character_, Sys.time())        # NA in: should not crash
+  expect_match(out, "Demo fallback")                                       # graceful: same as demo path
+})
+
+test_that("build_data_source_subtitle_line degrades gracefully for NULL src", {
+  out <- build_data_source_subtitle_line(NULL, Sys.time())                 # NULL in: should not crash
+  expect_match(out, "Demo fallback")                                       # graceful: same as demo path
 })
