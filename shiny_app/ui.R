@@ -386,7 +386,7 @@ shinyUI(
                         ),
                         
                         tags$div(class = "dash-footer",
-                                 "Powered by OpenWeather API", tags$br(),
+                                 uiOutput("data_source_footer", inline = TRUE), tags$br(),  # B3: reactive source claim
                                  "IBM Data Analytics Capstone"
                         )
                         

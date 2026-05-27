@@ -124,7 +124,8 @@ test_that("generate_demo_weather_data: schema and prediction values are valid", 
     "CITY_ASCII", "LNG", "LAT",
     "TEMPERATURE", "HUMIDITY",
     "BIKE_PREDICTION", "BIKE_PREDICTION_LEVEL",
-    "LABEL", "DETAILED_LABEL", "FORECASTDATETIME"
+    "LABEL", "DETAILED_LABEL", "FORECASTDATETIME",
+    "data_source"                                              # B3: source label column added
   )
   expect_equal(names(result), expected_cols)                   # schema must match server.R contract
   expect_true(all(result$BIKE_PREDICTION >= 0L))               # no negative predictions
@@ -135,4 +136,12 @@ test_that("generate_demo_weather_data: TEMPERATURE varies across slots within a 
   result      <- suppressMessages(generate_demo_weather_data())          # 6 cities x 8 forecast slots
   paris_temps <- result$TEMPERATURE[result$CITY_ASCII == "Paris"]        # 8 temperature values for Paris
   expect_gt(length(unique(paris_temps)), 1L)                             # must not all be identical
+})
+
+# ── B3: data_source column ─────────────────────────────────────────────────────
+
+test_that("generate_demo_weather_data adds data_source = 'demo_fallback' to every row", {
+  df <- suppressMessages(generate_demo_weather_data())                   # run demo generator
+  expect_true("data_source" %in% colnames(df))                          # column must exist
+  expect_true(all(df$data_source == "demo_fallback"))                    # every row must carry the fallback label
 })

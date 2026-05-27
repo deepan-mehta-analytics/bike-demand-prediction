@@ -515,6 +515,7 @@ generate_city_weather_bike_data <- function() {
   # select() then keeps only the columns the Shiny app actually needs.
   cities_bike_pred <- cities_df %>%
     left_join(results) %>%
+    mutate(data_source = "openweather_live") %>%                            # B3: honest live-path source label
     select(
       CITY_ASCII,            # City name (used to filter by dropdown selection)
       LNG, LAT,             # Coordinates (used to place markers on the map)
@@ -524,9 +525,10 @@ generate_city_weather_bike_data <- function() {
       BIKE_PREDICTION_LEVEL, # "small", "medium", or "large" (controls marker colour)
       LABEL,                 # Short HTML popup for the overview map
       DETAILED_LABEL,        # Full HTML popup for the city drill-down view
-      FORECASTDATETIME       # Forecast date and time string
+      FORECASTDATETIME,      # Forecast date and time string
+      data_source            # B3: carried through to consumers (openweather_live or demo_fallback)
     )
-  
+
   return(cities_bike_pred)  # Return the complete data frame to server.R
 }
 
@@ -605,13 +607,15 @@ generate_demo_weather_data <- function() {
         "Humidity: ",    HUMIDITY,    " % </br>",
         "Wind Speed: ",  WIND_SPEED,  " m/s </br>",
         "Datetime: ",    FORECASTDATETIME, " </br>"
-      )
+      ),
+      data_source           = "demo_fallback"                         # B3: honest demo-path source label
     ) %>%
     select(                                                            # keep only columns server.R expects
       CITY_ASCII, LNG, LAT,
       TEMPERATURE, HUMIDITY,
       BIKE_PREDICTION, BIKE_PREDICTION_LEVEL,
       LABEL, DETAILED_LABEL,
-      FORECASTDATETIME
+      FORECASTDATETIME,
+      data_source                                                      # B3: carried through to consumers
     )
 }

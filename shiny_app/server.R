@@ -16,6 +16,7 @@ if (!require(scales))    install.packages("scales")
 source("model_prediction.R")    # weather API + linear regression model
 source("gbfs_client.R")         # live GBFS station availability client (Phase 7B)
 source("bigquery_client.R")     # BigQuery auth + trend/snapshot queries (Phase 7F)
+source("server_helpers.R")      # B3: pure helpers (build_data_source_footer, build_data_source_subtitle_line)
 
 # ── Phase 7F: authenticate once on server start ───────────────────────────────
 # BQ_AVAILABLE is TRUE if GOOGLE_APPLICATION_CREDENTIALS is set and valid.
@@ -138,6 +139,12 @@ shinyServer(function(input, output, session) {
         format = "%Y-%m-%d %H:%M:%S",
         tz     = "UTC"
       ))
+  })
+
+  # ── B3: Reactive footer — reflects live/demo split each weather refresh ────
+  output$data_source_footer <- renderUI({                                    # called from ui.R footer slot
+    df <- city_weather_bike_df()                                             # () — reactive; re-runs on weather refresh
+    HTML(build_data_source_footer(df))                                       # HTML() safe: helper returns plain text
   })
 
   # ── Forecast window strings ───────────────────────────────────────────────────
@@ -515,7 +522,7 @@ shinyServer(function(input, output, session) {
   # All titles and axis labels now reference "24 Hours" and show time (HH:MM).
   
   build_temp_chart <- function(df, fmt_start, fmt_end) {         # fmt_start/fmt_end passed by caller
-    city <- unique(df$CITY_ASCII)[1]
+    city <- unique(df$CITY_ASCII)[1]                            # city name for chart title
     ggplot(df, aes(x = FORECASTDATETIME_DT, y = TEMPERATURE)) +
       geom_line(color = "#008cba", linewidth = 0.9) +
       geom_point(color = "#004e7c", size = 2.5) +
@@ -523,7 +530,11 @@ shinyServer(function(input, output, session) {
                 vjust = -0.9, size = 3, color = "#333") +
       labs(
         title    = paste("Temperature Trend \u2014", city),
-        subtitle = paste0("Next 24 Hours  \u2022  ", fmt_start, " \u2192 ", fmt_end),
+        subtitle = paste(                                        # B3: 2-line subtitle with source hint
+          paste0("Next 24 Hours  \u2022  ", fmt_start, " \u2192 ", fmt_end),
+          build_data_source_subtitle_line(unique(df$data_source)[1], Sys.time()),
+          sep = "\n"                                             # 2-line subtitle
+        ),
         x        = "Time of Day (UTC)",
         y        = "Temperature (\u00b0C)"
       ) +
@@ -540,7 +551,7 @@ shinyServer(function(input, output, session) {
   }
   
   build_bike_chart <- function(df, fmt_start, fmt_end) {         # fmt_start/fmt_end passed by caller
-    city <- unique(df$CITY_ASCII)[1]
+    city <- unique(df$CITY_ASCII)[1]                            # city name for chart title
     ggplot(df, aes(x = FORECASTDATETIME_DT, y = BIKE_PREDICTION)) +
       geom_line(color = "#43ac6a", linewidth = 0.9) +
       geom_point(color = "#2d7a4a", size = 2.5) +
@@ -548,7 +559,11 @@ shinyServer(function(input, output, session) {
                 vjust = -0.9, size = 3, color = "#333") +
       labs(
         title    = paste("Bike Demand Forecast \u2014", city),
-        subtitle = paste0("Next 24 Hours  \u2022  ", fmt_start, " \u2192 ", fmt_end),
+        subtitle = paste(                                        # B3: 2-line subtitle with source hint
+          paste0("Next 24 Hours  \u2022  ", fmt_start, " \u2192 ", fmt_end),
+          build_data_source_subtitle_line(unique(df$data_source)[1], Sys.time()),
+          sep = "\n"                                             # 2-line subtitle
+        ),
         x        = "Time of Day (UTC)",
         y        = "Predicted Bikes"
       ) +
