@@ -16,7 +16,7 @@ if (!require(scales))    install.packages("scales")
 source("model_prediction.R")    # weather API + linear regression model
 source("gbfs_client.R")         # live GBFS station availability client (Phase 7B)
 source("bigquery_client.R")     # BigQuery auth + trend/snapshot queries (Phase 7F)
-source("server_helpers.R")      # B3 + C5: pure helpers (build_data_source_footer, build_data_source_subtitle_line, compute_operator_alert_level)
+source("server_helpers.R")      # B3 + C1 + C5: pure helpers (build_data_source_footer, build_data_source_subtitle_line, build_engine_subtitle_line, compute_operator_alert_level)
 
 # ── C5: Operator alert thresholds (tune after one week of live observation) ──
 OP_ALERT_RED_ZERO_PCT    <- 0.25                                            # red:   ≥25% stations empty
@@ -564,10 +564,11 @@ shinyServer(function(input, output, session) {
                 vjust = -0.9, size = 3, color = "#333") +
       labs(
         title    = paste("Bike Demand Forecast \u2014", city),
-        subtitle = paste(                                        # B3: 2-line subtitle with source hint
+        subtitle = paste(                                        # C1: 3-line subtitle with source hint + engine label
           paste0("Next 24 Hours  \u2022  ", fmt_start, " \u2192 ", fmt_end),
           build_data_source_subtitle_line(unique(df$data_source)[1], Sys.time()),
-          sep = "\n"                                             # 2-line subtitle
+          build_engine_subtitle_line(),                          # C1: engine indicator (FastAPI RF vs local linear)
+          sep = "\n"                                             # 3-line subtitle
         ),
         x        = "Time of Day (UTC)",
         y        = "Predicted Bikes"

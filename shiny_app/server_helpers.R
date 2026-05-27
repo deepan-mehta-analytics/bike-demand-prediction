@@ -56,3 +56,12 @@ compute_operator_alert_level <- function(n_stations, n_empty_stations,
   if (zero_frac >= amber_pct || fill_frac < fill_pct) return("amber")       # warning: either condition
   "green"                                                                   # healthy
 }
+
+# ── C1: Engine indicator line for bike-demand chart subtitle ─────────────────
+# Reads USE_FASTAPI env var; returns appropriate engine label. No RMSE in UI.
+build_engine_subtitle_line <- function() {
+  if (identical(Sys.getenv("USE_FASTAPI", unset = "false"), "true")) {     # exact-match "true" only; anything else → local
+    return("Engine: FastAPI Random Forest")                                 # FastAPI path: model served via Cloud Run
+  }
+  "Engine: Local linear regression"                                         # default: model.csv IBM linear regression
+}
