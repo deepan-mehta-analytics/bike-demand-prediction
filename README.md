@@ -263,11 +263,12 @@ bike-demand-prediction/
 ├── Dockerfile.shiny                            # Containerises R Shiny app (rocker/shiny:4.4.3 + renv)
 ├── docker-compose.yml                          # Orchestrates Shiny + FastAPI services locally
 │
-├── tests/                                      # ── testthat suite (v1.5 — 37 tests, 63 assertions, CI-enforced)
+├── tests/                                      # ── testthat suite (Sprint 3 — 51 tests, 89 assertions, CI-enforced)
 │   ├── testthat.R                              # Local run entrypoint: setwd(shiny_app/), test_dir()
 │   └── testthat/
 │       ├── helper-workdir.R                    # Sets cwd to shiny_app/ via rprojroot before each test file
-│       ├── test-model-prediction.R             # 16 test_that blocks (20 assertions) — model.csv linear regressor
+│       ├── test-model-prediction.R             # 22 test_that blocks — model.csv linear regressor + C4 quantile threshold
+│       ├── test-data-source-footer.R           # 9 test_that blocks — B3 reactive footer + chart subtitle helpers
 │       ├── test-gbfs-client.R                  # 16 test_that blocks (38 assertions) — GBFS/TfL parsers; mockery-stubbed HTTP
 │       └── test-bigquery-client.R              # 4 test_that blocks (4 assertions) — BQ city slug lookup tables
 │
@@ -505,7 +506,7 @@ Restart the Shiny app to pick up the new key. This is a runtime config change �
 
 ## 🧪 Tests
 
-The **testthat suite is shipped** (v1.5.0): 37 tests / 63 assertions across three test files, enforced by the `testthat` job in GitHub Actions CI on every push and PR.
+The **testthat suite is shipped** (v1.5.0) and actively growing through Sprint 3: 51 tests / 89 assertions across four test files, enforced by the `testthat` job in GitHub Actions CI on every push and PR.
 
 **Manual verification (current):**
 - **Chronological 80/20 train/test split** — time-aware holdout prevents data leakage by design
@@ -637,7 +638,7 @@ The capstone presentation covers the full pipeline from data collection through 
 
 - [x] Washington DC added — Capital Bikeshare GBFS v2, RF model RMSE 119.31 bikes/hr
 - [x] ~~**Priority 4**~~ — Train Paris + Chicago RF models (v1.4.0) ✅ Shipped 2026-05-18
-- [x] ~~**Priority 5**~~ — testthat suite (36 tests / 62 assertions at v1.5.0 ship; 37/63 today after Sprint 2 added a sinusoidal variation test in commit `ea687f0`) covering model_prediction.R, gbfs_client.R, bigquery_client.R + GitHub Actions CI ✅ Shipped 2026-05-19 (v1.5.0)
+- [x] ~~**Priority 5**~~ — testthat suite (36 tests / 62 assertions at v1.5.0 ship; 51/89 today after Sprint 2–3 added diurnal variation + B3 data_source + C4 quantile threshold tests) covering model_prediction.R, server_helpers.R, gbfs_client.R, bigquery_client.R + GitHub Actions CI ✅ Shipped 2026-05-19 (v1.5.0)
 - [x] ~~**Priority 7**~~ — Seoul GBFS integration ✅ Shipped on `sample` key 2026-05-17 (commit `8682242`); full-coverage upgrade demoted 2026-05-23 to runtime `.Renviron` config — see "Optional — Seoul full-coverage upgrade" in How to Run
 - [ ] **Priority 8** — Expand to 8 cities — San Francisco (Ford GoBike) or Amsterdam (OV-fiets)
 
