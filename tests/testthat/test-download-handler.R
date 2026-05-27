@@ -33,11 +33,17 @@ test_that("build_csv_header_block returns 4 commented lines with metadata", {
   expect_match(lines[1], "^# Bike Demand 24h Forecast — exported 2026-05-27 14:30 UTC$")  # line 1: export stamp
   expect_match(lines[2], "^# City: Paris$")                                 # line 2: city name
   expect_match(lines[3], "^# Source: openweather_live$")                    # line 3: data source label
-  expect_match(lines[4], "^# Forecast horizon: 27 May 2026 14:00 -> 28 May 2026 11:00$")  # line 4: horizon arrow
+  expect_match(lines[4], "^# Forecast horizon: 27 May 2026 14:00 -> 28 May 2026 11:00 UTC$")  # line 4: horizon arrow + UTC label
 })
 
 test_that("build_csv_header_block reports demo_fallback source verbatim", {
   out <- build_csv_header_block("Seoul", "demo_fallback", "now", "later",  # fallback source label
                                  as.POSIXct("2026-05-27 00:00:00", tz = "UTC"))
   expect_match(out, "# Source: demo_fallback")                              # exact source label preserved in output
+})
+
+test_that("build_csv_header_block reports 'unknown' source when handler defaults from NA data_source", {
+  out <- build_csv_header_block("Chicago", "unknown", "start", "end",      # T7 follow-up M1: NA-defaulted source label
+                                 as.POSIXct("2026-05-27 12:00:00", tz = "UTC"))
+  expect_match(out, "# Source: unknown")                                    # downstream handler defaults NA → "unknown"
 })

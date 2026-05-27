@@ -93,7 +93,7 @@ build_csv_header_block <- function(city, source, fmt_start, fmt_end, exported_at
             format(exported_at, "%Y-%m-%d %H:%M", tz = "UTC")),            # line 1: ISO date + HH:MM UTC
     sprintf("# City: %s", city),                                            # line 2: city name verbatim
     sprintf("# Source: %s", source),                                        # line 3: data source label (live or demo)
-    sprintf("# Forecast horizon: %s -> %s", fmt_start, fmt_end),            # line 4: horizon window arrow notation
+    sprintf("# Forecast horizon: %s -> %s UTC", fmt_start, fmt_end),        # line 4: horizon window in UTC (matches line 1)
     sep = "\n"                                                              # newline-separated, no trailing newline
   )
 }

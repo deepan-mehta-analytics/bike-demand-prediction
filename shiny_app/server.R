@@ -1011,7 +1011,13 @@ shinyServer(function(input, output, session) {
     },
     content = function(file) {
       df <- operator_city_data()                                            # 8 forecast slots for selected city
-      src <- if (nrow(df) > 0L && "data_source" %in% colnames(df)) df$data_source[1] else "unknown"  # T1 column
+      src <- if (nrow(df) > 0L                                              # T7 follow-up M1: guard against NA src
+              && "data_source" %in% colnames(df)
+              && !is.na(df$data_source[1])) {
+        df$data_source[1]                                                   # T1 column, non-NA value
+      } else {
+        "unknown"                                                           # safe default for empty / missing / NA
+      }
       w   <- forecast_window()                                              # reactive window strings
       header <- build_csv_header_block(                                     # helper: 4 commented lines
         city        = input$operator_city,
@@ -1021,11 +1027,13 @@ shinyServer(function(input, output, session) {
         exported_at = Sys.time()
       )
       writeLines(header, con = file)                                        # write 4 header lines first
-      df %>%                                                                # then append CSV body
-        select(CITY_ASCII, FORECASTDATETIME, TEMPERATURE, HUMIDITY,
-               WIND_SPEED, BIKE_PREDICTION, BIKE_PREDICTION_LEVEL) %>%
-        write.table(file, sep = ",", row.names = FALSE,                    # append; CSV column header row included
-                    append = TRUE, col.names = TRUE)
+      suppressWarnings(                                                     # T7 follow-up M2: silence "appending column names" noise
+        df %>%                                                              # then append CSV body
+          select(CITY_ASCII, FORECASTDATETIME, TEMPERATURE, HUMIDITY,
+                 WIND_SPEED, BIKE_PREDICTION, BIKE_PREDICTION_LEVEL) %>%
+          write.table(file, sep = ",", row.names = FALSE, quote = FALSE,    # T7 follow-up I1: quote=FALSE for pandas
+                      append = TRUE, col.names = TRUE)                      # column header row included for consumers
+      )
     }
   )
 
