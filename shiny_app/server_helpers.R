@@ -36,3 +36,23 @@ build_data_source_subtitle_line <- function(src, build_time) {
   }
   "Source: Demo fallback — set OPENWEATHER_KEY in .Renviron and restart"   # actionable user hint
 }
+
+# ── C5: Operator alert level based on snapshot state (no forecast comparison) ─
+# Inputs (all integers/numerics):
+#   n_stations       — total stations in the city
+#   n_empty_stations — stations with zero bikes available
+#   total_bikes      — sum of bikes available across all stations
+#   total_capacity   — sum of dock capacity across all stations
+#   red_pct, amber_pct — zero-bike fraction thresholds
+#   fill_pct         — fleet fill-rate threshold below which amber fires
+# Output: one of "red", "amber", "green"
+compute_operator_alert_level <- function(n_stations, n_empty_stations,
+                                          total_bikes, total_capacity,
+                                          red_pct, amber_pct, fill_pct) {
+  if (n_stations == 0L || total_capacity == 0L) return("red")               # degenerate: no fleet → critical
+  zero_frac <- n_empty_stations / n_stations                                # fraction of stations with 0 bikes
+  fill_frac <- total_bikes / total_capacity                                 # fleet-wide fill rate
+  if (zero_frac >= red_pct)                          return("red")          # critical: many empty stations
+  if (zero_frac >= amber_pct || fill_frac < fill_pct) return("amber")       # warning: either condition
+  "green"                                                                   # healthy
+}

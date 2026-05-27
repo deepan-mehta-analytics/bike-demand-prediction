@@ -18,6 +18,11 @@ source("gbfs_client.R")         # live GBFS station availability client (Phase 7
 source("bigquery_client.R")     # BigQuery auth + trend/snapshot queries (Phase 7F)
 source("server_helpers.R")      # B3: pure helpers (build_data_source_footer, build_data_source_subtitle_line)
 
+# ── C5: Operator alert thresholds (tune after one week of live observation) ──
+OP_ALERT_RED_ZERO_PCT    <- 0.25                                            # red:   ≥25% stations empty
+OP_ALERT_AMBER_ZERO_PCT  <- 0.10                                            # amber: ≥10% stations empty
+OP_ALERT_AMBER_FILL_PCT  <- 0.20                                            # amber: fleet fill <20%
+
 # ── Phase 7F: authenticate once on server start ───────────────────────────────
 # BQ_AVAILABLE is TRUE if GOOGLE_APPLICATION_CREDENTIALS is set and valid.
 # All GCP Stream tab outputs gate on this flag before querying BigQuery.
@@ -809,33 +814,45 @@ shinyServer(function(input, output, session) {
       ))
     }
 
-    ratio <- if (total > 0) peak / total else Inf                          # demand-to-supply ratio (Inf when fleet empty)
-
-    # Choose alert level by ratio
-    if (is.infinite(ratio) || ratio >= 1.0) {                              # peak demand meets or exceeds all available bikes
-      panel_class <- "panel-danger"                                        # red: critical
+    # ── C5: Compute fleet-state alert level (snapshot-based, not forecast-based) ──
+    total_capacity <- fleet$total_capacity                                   # already summed in operator_fleet_summary()
+    alert_level <- compute_operator_alert_level(
+      n_stations       = n,
+      n_empty_stations = empty,
+      total_bikes      = total,
+      total_capacity   = total_capacity,
+      red_pct   = OP_ALERT_RED_ZERO_PCT,
+      amber_pct = OP_ALERT_AMBER_ZERO_PCT,
+      fill_pct  = OP_ALERT_AMBER_FILL_PCT
+    )
+    if (alert_level == "red") {                                             # critical: ≥25% stations empty
+      panel_class <- "panel-danger"
       icon_glyph  <- "glyphicon-warning-sign"
       alert_title <- "Critical Supply Shortage"
       alert_body  <- paste0(
-        "Peak demand (", scales::comma(peak), " bikes) equals or exceeds ",
-        "current availability (", scales::comma(total), " bikes). ",
-        "Immediate rebalancing required."
+        round(empty / n * 100), "% of stations (", empty, " of ", n,
+        ") have zero bikes. Immediate rebalancing required. ",
+        "24h peak demand forecast: ", scales::comma(peak), " bikes — for capacity planning context."
       )
-    } else if (ratio >= 0.75) {                                            # demand is 75–99% of availability
-      panel_class <- "panel-warning"                                       # amber: low supply warning
+    } else if (alert_level == "amber") {                                    # warning: ≥10% empty OR <20% fill
+      panel_class <- "panel-warning"
       icon_glyph  <- "glyphicon-exclamation-sign"
       alert_title <- "Low Supply Warning"
+      fill_pct_disp <- if (total_capacity > 0L) round(total / total_capacity * 100) else 0L  # display fill %
       alert_body  <- paste0(
-        "Peak demand is ", round(ratio * 100), "% of current availability. ",
-        "Proactive rebalancing advised before peak hours."
+        round(empty / n * 100), "% of stations empty; fleet fill ",
+        fill_pct_disp, "%. Proactive rebalancing advised. ",
+        "24h peak demand forecast: ", scales::comma(peak), " bikes — for capacity planning context."
       )
-    } else {                                                               # demand is under 75% of availability
-      panel_class <- "panel-success"                                       # green: supply adequate
+    } else {                                                                # green: healthy
+      panel_class <- "panel-success"
       icon_glyph  <- "glyphicon-ok-sign"
       alert_title <- "Supply Adequate"
+      fill_pct_disp <- if (total_capacity > 0L) round(total / total_capacity * 100) else 0L  # display fill %
       alert_body  <- paste0(
-        "Fleet is well-positioned. Peak demand (", scales::comma(peak), " bikes) ",
-        "is ", round(ratio * 100), "% of available supply."
+        "Fleet is well-positioned. ", fill_pct_disp, "% fill rate, ",
+        empty, " of ", n, " stations empty. ",
+        "24h peak demand forecast: ", scales::comma(peak), " bikes — for capacity planning context."
       )
     }
 
