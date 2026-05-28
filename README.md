@@ -200,22 +200,22 @@ This separation reflects real-world machine learning workflows, where experiment
 
 ## 📊 Dashboard Preview
 
-> 💡 Click any screenshot to open it full-size.
+> 💡 Click any screenshot to enlarge it — GitHub opens a zoom overlay in place.
 
 ### 🌍 Global Demand Overview
-<a href="results/screenshots/dashboard_overview.png"><img src="results/screenshots/dashboard_overview.png" alt="Overview Map" width="100%"></a>
+![Overview Map](results/screenshots/dashboard_overview.png)
 
 ### 🔍 City Drill-Down
-<a href="results/screenshots/city_drilldown.png"><img src="results/screenshots/city_drilldown.png" alt="City Drilldown" width="100%"></a>
+![City Drilldown](results/screenshots/city_drilldown.png)
 
 ### 📈 Temperature Trend
-<a href="results/screenshots/temperature_trend.png"><img src="results/screenshots/temperature_trend.png" alt="Temperature Trend" width="100%"></a>
+![Temperature Trend](results/screenshots/temperature_trend.png)
 
 ### 🚲 Bike Demand Forecast — Next 24 Hours
-<a href="results/screenshots/bike_demand_next_24_hrs.png"><img src="results/screenshots/bike_demand_next_24_hrs.png" alt="Demand Forecast" width="100%"></a>
+![Demand Forecast](results/screenshots/bike_demand_next_24_hrs.png)
 
 ### 💧 Humidity vs Demand Correlation
-<a href="results/screenshots/humidity_vs_demand.png"><img src="results/screenshots/humidity_vs_demand.png" alt="Humidity" width="100%"></a>
+![Humidity](results/screenshots/humidity_vs_demand.png)
 
 ---
 
