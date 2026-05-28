@@ -410,7 +410,7 @@ predict_bike_demand_fastapi <- function(FORECASTDATETIME, TEMPERATURE, HUMIDITY,
       url     = predict_url,                       # FastAPI /predict endpoint
       body    = request_body,                      # request payload
       encode  = "json",                            # serialise list to JSON
-      timeout(10)                                  # fail fast if service unreachable
+      timeout(30)                                  # absorb Cloud Run scale-to-zero cold start (~2.7s boot) + first per-city RF model load (~4.4s); 10s was too tight and fell back to model.csv on the first request
     )
 
     if (http_error(response)) {                    # non-2xx status → treat as failure
