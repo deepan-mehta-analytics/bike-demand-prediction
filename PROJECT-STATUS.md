@@ -11,7 +11,7 @@ Both repos form a single portfolio system. Track them together here.
 
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
-| **bike_demand_prediction** (this repo) | R Shiny dashboard | v1.5.0 shipped — testthat suite + CI; v1.6.0 Sprint 1 (Workstream A) shipped — GCP Stream tab live via Cloud Run poller; v1.6.0 Sprint 2 (Workstream B — forecast freshness + honest demo) SHIPPED 2026-05-25; **v1.6.0 Sprint 3 in progress** — T1 (B3 data_source + reactive footer + chart subtitle, `2d678f9`) + T2 (C4 per-city quantile thresholds, `bbdd8c7`) complete 2026-05-27; T3–T7 + doc-sync + v1.6.0 release pending | 🔄 In Progress | `3af2014` |
+| **bike_demand_prediction** (this repo) | R Shiny dashboard | **v1.6.0 SHIPPED 2026-05-28** — Sprint 1 (Cloud Run poller) + Sprint 2 (hourly reactive refresh + diurnal demo) + Sprint 3 (7 honesty fixes: B3 reactive footer, C1 engine indicator, C2 linear smoother, C3 derived stat-cards, C4 per-city quantile thresholds, C5 operator alert rewrite, C6 CSV metadata) + WIND_SPEED hotfix (`75f1022`); 74 tests / 116 assertions across 8 test files | ✅ Done | `75f1022` |
 | **bike-demand-ml-system** | Python FastAPI + ML training | **v3.1.0 shipped (2026-05-25)** — `gbfs-poller` Cloud Run + `gbfs-poller-cron` Scheduler + BQ 7-day partitions, replacing the v3.0.0 Dataflow path at zero always-free-tier cost (joint cross-repo work tracked as Shiny v1.6.0 Sprint 1). v4.3.0 was Paris tz fix; v4.4.0 drift monitoring in design | ✅ Done | `7625f17` |
 
 ### Trained City Models (Python repo)
@@ -57,7 +57,7 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 * GBFS live station data: Capital Bikeshare v2 (DC), standard GBFS v2 (NYC/Paris/Chicago), TfL BikePoint (London)
 * FastAPI integration: `httr::POST` to Python RF endpoint; per-city routing via `group_modify()`
 * IBM Capstone graded tracks (R + Python notebooks)
-* `renv.lock` — R 4.4.3, 139 packages pinned
+* `renv.lock` — R 4.4.3, 139 packages pinned at v1.0.0 ship (201 today after `bigrquery` + `testthat` + `mockery` additions in v1.2 / v1.5)
 * `Dockerfile.shiny` — `rocker/shiny:4.4.3`; renv restore via Posit PPM binaries
 * CI: r-check + docker-compose-build with GHA apt + Docker layer caching
 * MIT LICENSE + full GitHub release notes published
@@ -67,7 +67,7 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 
 #### Phase 7A — City Replacement
 * Replaced Suzhou (no GBFS) with Chicago (Divvy GBFS v2)
-* `config/cities.yaml` — GBFS URLs, BigQuery datasets, timezones for all 5 cities
+* `config/cities.yaml` — GBFS URLs, BigQuery datasets, timezones for all 5 cities at v1.1 ship (6 today — Washington DC added 2026-05-08)
 * `config/gcp_config.yaml` — Pub/Sub topic, BigQuery dataset, local-mode paths
 
 #### Phase 7B — Live Station Data
@@ -148,7 +148,7 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 * Seoul fallback proxy removed for both cities
 
 ### v1.5.0 — testthat suite + CI (shipped 2026-05-19)
-* 37-test / 63-assertion testthat suite: `test-model-prediction.R` (21 assertions; +1 from Sprint 2 sinusoidal variation test), `test-gbfs-client.R` (38), `test-bigquery-client.R` (4)
+* 37-test / 63-assertion testthat suite at v1.5.0 ship: `test-model-prediction.R` (21 assertions; +1 from Sprint 2 sinusoidal variation test), `test-gbfs-client.R` (38), `test-bigquery-client.R` (4) — extended to 74 tests / 116 assertions across 8 test files by v1.6.0 Sprint 3
 * HTTP layer fully stubbed via `mockery::stub()` — no network, no cassettes
 * GitHub Actions `testthat` job (4th job in `ci.yml`) — mirrors `r-check`'s renv-restore pattern, shares its renv cache key
 * Cold-cache run: ~5 min; warm-cache run: ~1 min (63 assertions in ~2 s once renv is restored)
@@ -185,7 +185,7 @@ All RMSEs use a **chronological 80/20 split** (oldest 80% → train, newest 20% 
 
 **Sprint 2 (Workstream B — Shiny forecast freshness + honest demo) SHIPPED 2026-05-25.** All 7 tasks executed per plan `b3eb764`. Commits: `ea687f0` (Task 1+2 — sinusoidal diurnal variation in `generate_demo_weather_data()` + failing-test-first), `967c465` (Task 2 follow-up — peak/trough comment fix), `e8f4ddc` (Tasks 3+4+5+6 — reactive refactor of `server.R` with 1-hour `weather_timer`, 14 consumers updated to call reactives with parens, 3 build functions take `fmt_start`/`fmt_end` as explicit params), `faef978` (Task 7 — `ui.R` GCP Stream hint text + `bigquery_client.R` comment updated from Dataflow to Cloud Run GBFS poller). Verified: parse OK, no bare reactive references, testthat 63/63 pass, all 4 Shiny CI jobs green on `faef978`.
 
-**Sprint 3 (Workstream C — honest claims + meaningful comparisons):** Not yet started.
+**Sprint 3 (Workstream C — honest claims + meaningful comparisons): SHIPPED 2026-05-28.** All 7 items (B3 + C1–C6) plus a critical WIND_SPEED hotfix (`75f1022`) committed across 18 commits (`7bbd101` → `75f1022`). Full smoke test passed in demo mode 2026-05-28. testthat suite extended to 74 tests / 116 assertions across 8 test files.
 
 **Python v4.4.0 drift monitor** in design phase (S1 complete 2026-05-23 — spec `dac2990` + plan `e8d26bb`; S2 next on Python side). No Shiny code changes expected — drift monitor lives entirely in the Python repo.
 

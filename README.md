@@ -8,7 +8,7 @@ This project delivers a full-stack predictive analytics system for bike-sharing 
 
 The R pipeline benchmarks six model classes on a chronological 80/20 held-out split, achieving a Random Forest with R²=0.730 (RMSE 333.89 bikes/hr) — a 39% improvement over the baseline linear model. The Bikecast Shiny dashboard provides live 24-hour demand forecasts for six global cities rendered on an interactive Leaflet map, with city drill-down showing live GBFS station availability markers, demand-band filtering, and expand-to-modal charts.
 
-**v1.5 is shipped.** Phase 7 extended the dashboard into two real end-user tools: an **Operator tab** (fleet rebalancing alerts, demand vs. station capacity) and a **Rider tab** (live availability score, best-time recommendation, natural-language summary). The prediction backend is a Python FastAPI inference service with **per-city RF models for all six cities**, live on **GCP Cloud Run**; Docker Compose runs the full stack locally. **v1.2 adds a GCP Stream tab** — `bigrquery` queries `bike_demand.station_snapshots` in BigQuery directly from the Shiny app, displaying live 5-minute windowed avg/min/max bike availability for NYC, DC, London, and Chicago. The streaming pipeline that fills this table shipped originally as Apache Beam / Dataflow (Python repo v3.0.0); from 2026-05-25 it runs as a zero-always-free-tier Cloud Run `gbfs-poller` service driven by Cloud Scheduler every 5 minutes (Python repo v3.1.0; Shiny tracked the dashboard side as v1.6.0 Sprint 1). **v1.3 adds a real-time Feed Health panel** — colour-coded GBFS feed status (LIVE / DELAYED / DOWN) per city in the sidebar, auto-refreshing every 5 minutes with graceful demo fallback when the OpenWeather API key is not set. **v1.4 adds city-specific RF models for Paris** (Vélib' Métropole, RMSE 20.51 bikes/hr post-v4.3.0; was 23.30 in v1.4.0 baseline) **and Chicago** (Divvy Bikes, RMSE 202.99 bikes/hr), replacing the Seoul fallback proxy for both cities. **v1.5 adds a 37-test / 63-assertion `testthat` suite** covering `model_prediction.R`, `gbfs_client.R`, and `bigquery_client.R` with `mockery`-stubbed HTTP, enforced by a fourth GitHub Actions CI job on every push and PR.
+**v1.6.0 is shipped.** Phase 7 extended the dashboard into two real end-user tools: an **Operator tab** (fleet rebalancing alerts, demand vs. station capacity) and a **Rider tab** (live availability score, best-time recommendation, natural-language summary). The prediction backend is a Python FastAPI inference service with **per-city RF models for all six cities**, live on **GCP Cloud Run**; Docker Compose runs the full stack locally. **v1.2 adds a GCP Stream tab** — `bigrquery` queries `bike_demand.station_snapshots` in BigQuery directly from the Shiny app, displaying live 5-minute windowed avg/min/max bike availability for NYC, DC, London, and Chicago. The streaming pipeline that fills this table shipped originally as Apache Beam / Dataflow (Python repo v3.0.0); from 2026-05-25 it runs as a zero-always-free-tier Cloud Run `gbfs-poller` service driven by Cloud Scheduler every 5 minutes (Python repo v3.1.0; Shiny tracked the dashboard side as v1.6.0 Sprint 1). **v1.3 adds a real-time Feed Health panel** — colour-coded GBFS feed status (LIVE / DELAYED / DOWN) per city in the sidebar, auto-refreshing every 5 minutes with graceful demo fallback when the OpenWeather API key is not set. **v1.4 adds city-specific RF models for Paris** (Vélib' Métropole, RMSE 20.51 bikes/hr post-v4.3.0; was 23.30 in v1.4.0 baseline) **and Chicago** (Divvy Bikes, RMSE 202.99 bikes/hr), replacing the Seoul fallback proxy for both cities. **v1.5 adds a 37-test / 63-assertion `testthat` suite** covering `model_prediction.R`, `gbfs_client.R`, and `bigquery_client.R` with `mockery`-stubbed HTTP, enforced by a fourth GitHub Actions CI job on every push and PR. **v1.6.0 ships three sprints** of dashboard honesty and freshness improvements: Sprint 1 replaces the Dataflow streaming pipeline with a Cloud Run GBFS poller at zero always-free-tier cost; Sprint 2 adds hourly reactive weather refresh and realistic diurnal variation to the demo fallback; Sprint 3 fixes seven claims-honesty gaps (reactive data-source footer, engine indicator, linear humidity smoother, derived stat-card counts, per-city quantile demand thresholds, operator alert rewrite, and CSV metadata export). The testthat suite grows to **74 tests / 116 assertions across 8 test files**.
 
 ### End-to-end ML pipeline: raw Seoul data → six competing models → live global demand forecast
 
@@ -26,6 +26,7 @@ The R pipeline benchmarks six model classes on a chronological 80/20 held-out sp
 ![Status](https://img.shields.io/badge/v1.3-Released-success?style=for-the-badge)
 ![Status](https://img.shields.io/badge/v1.4-Released-success?style=for-the-badge)
 ![Status](https://img.shields.io/badge/v1.5-Released-success?style=for-the-badge)
+![Status](https://img.shields.io/badge/v1.6-Released-success?style=for-the-badge)
 ![API](https://img.shields.io/badge/API-OpenWeather-blue?style=for-the-badge)
 ![IBM](https://img.shields.io/badge/IBM-Data%20Analytics%20Capstone-054ADA?style=for-the-badge&logo=ibm&logoColor=white)
 
@@ -54,9 +55,9 @@ The R pipeline benchmarks six model classes on a chronological 80/20 held-out sp
 | Live station data | GBFS v2 (NYC / Paris / Chicago) · TfL BikePoint API (London) | Real-time available bikes per station |
 | Dashboard | R Shiny, shinythemes (Yeti), shinyjs | Live Bikecast 24-hr demand web app |
 | ML inference service *(v1.1)* | Python FastAPI + scikit-learn RF | `/predict` endpoint; per-city RF models (6 cities) |
-| Streaming pipeline *(v1.2)* | GCP Pub/Sub · Apache Beam / Dataflow · BigQuery · bigrquery | GBFS → 5-min windowed station aggregations → Shiny GCP Stream tab |
+| Streaming pipeline *(v1.2; reactivated v1.6.0)* | Cloud Run GBFS poller · Cloud Scheduler · BigQuery · bigrquery | GBFS → 5-min windowed station aggregations → Shiny GCP Stream tab |
 | Containerisation *(v1.1)* | Docker · Docker Compose · GCP Cloud Run | Reproducible local + cloud deployment |
-| Testing & CI *(v1.5)* | testthat 3.x · mockery · GitHub Actions | 63-assertion suite across 3 modules (HTTP stubbed via `mockery`); 4-job CI gate on every push and PR |
+| Testing & CI *(v1.5)* | testthat 3.x · mockery · GitHub Actions | 116-assertion suite across 8 test files (HTTP stubbed via `mockery`); 4-job CI gate on every push and PR |
 | Development | RStudio, JupyterLab | Notebook authoring and Shiny development |
 
 ---
@@ -110,7 +111,7 @@ The R / IBM Capstone pipeline learns from the UCI Seoul Bike Sharing dataset —
 ┌──────────────────────────▼───────────────────────────────────────┐
 │          REAL USE-CASE LAYER  (v1.2 shipped)                     │
 │                                                                  │
-│  GBFS live feeds ──► Pub/Sub topic ──► Dataflow pipeline         │
+│  GBFS live feeds ──► Cloud Run poller ──► BigQuery snapshots      │
 │                                              │                   │
 │                                              ▼                   │
 │  Python FastAPI /predict  ◄────── BigQuery station_snapshots     │
@@ -257,18 +258,23 @@ bike-demand-prediction/
 │   ├── ui.R
 │   ├── server.R
 │   ├── model_prediction.R
+│   ├── server_helpers.R                        # Reactive footer + subtitle source helpers (Sprint 3 B3)
 │   ├── gbfs_client.R                           # Live GBFS / TfL station data client (Phase 7B)
 │   └── bigquery_client.R                       # BigQuery BQ auth + trend/snapshot query functions (Phase 7F)
 │
 ├── Dockerfile.shiny                            # Containerises R Shiny app (rocker/shiny:4.4.3 + renv)
 ├── docker-compose.yml                          # Orchestrates Shiny + FastAPI services locally
 │
-├── tests/                                      # ── testthat suite (Sprint 3 — 51 tests, 89 assertions, CI-enforced)
+├── tests/                                      # ── testthat suite (v1.6.0 — 74 tests, 116 assertions, CI-enforced)
 │   ├── testthat.R                              # Local run entrypoint: setwd(shiny_app/), test_dir()
 │   └── testthat/
 │       ├── helper-workdir.R                    # Sets cwd to shiny_app/ via rprojroot before each test file
-│       ├── test-model-prediction.R             # 22 test_that blocks — model.csv linear regressor + C4 quantile threshold
-│       ├── test-data-source-footer.R           # 9 test_that blocks — B3 reactive footer + chart subtitle helpers
+│       ├── test-model-prediction.R             # 22 test_that blocks (31 assertions) — model.csv linear regressor, demo generator, C4 quantile thresholds, WIND_SPEED schema
+│       ├── test-data-source-footer.R           # 9 test_that blocks (16 assertions) — B3 reactive footer + chart subtitle helpers
+│       ├── test-operator-alert.R               # 9 test_that blocks — C5 operator alert level (zero-bike % thresholds + data-quality variant)
+│       ├── test-build-bike-chart.R             # 4 test_that blocks — C1 engine indicator subtitle (build_engine_subtitle_line)
+│       ├── test-stat-card.R                    # 4 test_that blocks — C3 derived stat-card counts (count_unique_cities, FORECAST_HOURS_CONSTANT)
+│       ├── test-download-handler.R             # 6 test_that blocks (10 assertions) — C6 CSV filename + header block
 │       ├── test-gbfs-client.R                  # 16 test_that blocks (38 assertions) — GBFS/TfL parsers; mockery-stubbed HTTP
 │       └── test-bigquery-client.R              # 4 test_that blocks (4 assertions) — BQ city slug lookup tables
 │
@@ -389,15 +395,26 @@ A professional three-column dashboard built on the **Yeti Bootswatch** theme.
 - **Chicago RF model** — city-specific Divvy model (RMSE 202.99 bikes/hr, HOUR + TEMPERATURE 0.39); replaces Seoul fallback proxy *(v1.4.0 ✅)*
 
 **Features (v1.5 — shipped):**
-- **testthat suite** — 37-test automated suite (63 assertions across `model_prediction.R`, `gbfs_client.R`, `bigquery_client.R`) — HTTP layer stubbed via `mockery`, enforced by GitHub Actions CI on every push and PR *(v1.5.0 ✅)*
+- **testthat suite** — 37-test automated suite (63 assertions at v1.5.0 ship; 74 tests / 116 assertions today across 8 test files after Sprint 2–3 additions) — HTTP layer stubbed via `mockery`, enforced by GitHub Actions CI on every push and PR *(v1.5.0 ✅)*
+
+**Features (v1.6.0 — shipped):**
+- **GCP Stream pipeline reactivated** — `gbfs-poller` FastAPI service on Cloud Run + `gbfs-poller-cron` Cloud Scheduler (5-min cron, OIDC auth) replaces the v3.0.0 Dataflow path at zero always-free-tier cost; BQ table recreated with DAY partitioning and 7-day TTL; 6,032 rows confirmed at first automated cron window *(Sprint 1 — Workstream A ✅)*
+- **Hourly reactive weather refresh** — `weatherTimer` (1-hour `reactiveTimer`) replaces startup-only one-shot fetch; demo fallback (`generate_demo_weather_data()`) serves synthetic forecast when `OPENWEATHER_KEY` not set; sinusoidal diurnal variation added to demo TEMPERATURE / HUMIDITY so charts show realistic variation *(Sprint 2 — Workstream B ✅)*
+- **Reactive data-source footer** — footer and chart subtitles surface whether data comes from OpenWeather API or demo fallback; `build_data_source_footer()` + `build_data_source_subtitle_line()` helpers in `server_helpers.R` *(Sprint 3 — B3 ✅)*
+- **Engine indicator** — bike demand chart subtitle 3rd line shows `Engine: Local linear regression` or `Engine: FastAPI Random Forest` based on `USE_FASTAPI` env var *(Sprint 3 — C1 ✅)*
+- **Linear humidity smoother** — `poly(4)` wavy smoother replaced with straight linear fit; subtitle reads `Linear trend across 8 forecast slots` *(Sprint 3 — C2 ✅)*
+- **Derived stat-card counts** — Cities and Hr Forecast stat-card values computed from actual data (not hardcoded), so changes to `cities.yaml` propagate automatically *(Sprint 3 — C3 ✅)*
+- **Per-city quantile demand thresholds** — demand bands (Low / Medium / High) computed as city-specific quantiles of the 24h forecast rather than global fixed values; legend updated to "bottom/middle/top third of this city's 24h forecast" *(Sprint 3 — C4 ✅)*
+- **Operator alert rewrite** — alert severity computed from zero-bike-station % thresholds (🔴 ≥ 25% zero-bike stations; 🟡 ≥ 10% zero-bike or ≤ 20% fill rate) replacing the previous demand÷capacity ratio; body references 24h peak forecast as capacity planning context only *(Sprint 3 — C5 ✅)*
+- **CSV download: timestamped filename + source metadata** — filename pattern `bike-demand-forecast-<city>-YYYYMMDD-HHMM.csv` (UTC); 4 `#`-prefixed metadata rows; column headers unquoted for pandas compatibility; `WIND_SPEED` column restored *(Sprint 3 — C6 ✅)*
 
 **Demand bands:**
 
-| Level | Bikes per 3h slot | Map Marker |
-|-------|------------------|------------|
-| 🟢 Low | < 1,000 | Green, radius 6 |
-| 🟡 Medium | 1,000 – 3,000 | Yellow, radius 10 |
-| 🔴 High | > 3,000 | Red, radius 12 |
+| Level | Threshold (v1.6.0+) | Map Marker |
+|-------|---------------------|------------|
+| 🟢 Low | Bottom third of this city's 24h forecast | Green, radius 6 |
+| 🟡 Medium | Middle third of this city's 24h forecast | Yellow, radius 10 |
+| 🔴 High | Top third of this city's 24h forecast | Red, radius 12 |
 
 **Cities covered:** Seoul · London · New York · Paris · Chicago · Washington DC
 
@@ -506,7 +523,7 @@ Restart the Shiny app to pick up the new key. This is a runtime config change �
 
 ## 🧪 Tests
 
-The **testthat suite is shipped** (v1.5.0) and actively growing through Sprint 3: 51 tests / 89 assertions across four test files, enforced by the `testthat` job in GitHub Actions CI on every push and PR.
+The **testthat suite is shipped** (v1.5.0, extended through v1.6.0 Sprint 3): **74 tests / 116 assertions** across eight test files, enforced by the `testthat` job in GitHub Actions CI on every push and PR.
 
 **Manual verification (current):**
 - **Chronological 80/20 train/test split** — time-aware holdout prevents data leakage by design
@@ -517,14 +534,19 @@ The **testthat suite is shipped** (v1.5.0) and actively growing through Sprint 3
 ```r
 # Run from repo root:
 Rscript tests/testthat.R
-# Expected last line: [ FAIL 0 | WARN 0 | SKIP 0 | PASS 62 ]
+# Expected last line: [ FAIL 0 | WARN 0 | SKIP 0 | PASS 116 ]
 ```
 
-| Module | Tests | Status | Covers |
-|--------|-------|--------|--------|
-| `test-model-prediction.R` | 16 | ✅ Shipped | `safe_val`, `calculate_bike_prediction_level`, `load_saved_model`, `predict_bike_demand`, `generate_demo_weather_data` |
-| `test-gbfs-client.R` | 16 | ✅ Shipped | `%\|\|%`, `EMPTY_STATIONS_SCHEMA`, parsers, `get_city_live_stations` (HTTP-mocked via `mockery`) |
-| `test-bigquery-client.R` | 4 | ✅ Shipped | `BQ_CITY_SLUG_TO_NAME` / `BQ_CITY_NAME_TO_SLUG` lookup tables |
+| Module | Tests | Assertions | Status | Covers |
+|--------|-------|------------|--------|--------|
+| `test-model-prediction.R` | 22 | 31 | ✅ Shipped | `safe_val`, `calculate_bike_prediction_level`, `load_saved_model`, `predict_bike_demand`, `generate_demo_weather_data`, WIND_SPEED schema, C4 quantile thresholds |
+| `test-data-source-footer.R` | 9 | 16 | ✅ Shipped | `build_data_source_footer()`, `build_data_source_subtitle_line()` — B3 reactive footer helpers |
+| `test-operator-alert.R` | 9 | 9 | ✅ Shipped | `compute_operator_alert_level()` — C5 zero-bike % thresholds + data-quality variant |
+| `test-build-bike-chart.R` | 4 | 4 | ✅ Shipped | `build_engine_subtitle_line()` — C1 engine indicator |
+| `test-stat-card.R` | 4 | 4 | ✅ Shipped | `count_unique_cities()`, `FORECAST_HOURS_CONSTANT` — C3 derived stat-card counts |
+| `test-download-handler.R` | 6 | 10 | ✅ Shipped | `build_csv_filename()`, `build_csv_header_block()` — C6 CSV metadata |
+| `test-gbfs-client.R` | 16 | 38 | ✅ Shipped | `%\|\|%`, `EMPTY_STATIONS_SCHEMA`, parsers, `get_city_live_stations` (HTTP-mocked via `mockery`) |
+| `test-bigquery-client.R` | 4 | 4 | ✅ Shipped | `BQ_CITY_SLUG_TO_NAME` / `BQ_CITY_NAME_TO_SLUG` lookup tables |
 
 ---
 
@@ -634,11 +656,24 @@ The capstone presentation covers the full pipeline from data collection through 
 - [x] Paris RF model — Vélib' Métropole open data (2023–2024, 17,539 rows; 2022 dropped in v4.3.0 as a data-quality gate); RMSE **20.51** bikes/hr post-v4.3.0 (was 23.30 in v1.4.0 baseline); HOUR (0.71) top feature; replaces Seoul fallback
 - [x] Chicago RF model — Divvy quarterly CSVs (2019–2022, 32,720 rows); RMSE **202.99** bikes/hr; HOUR + TEMPERATURE (0.39 each); replaces Seoul fallback
 
+### ✅ v1.6.0 — Released (2026-05-28)
+
+- [x] GCP Stream pipeline reactivated — `gbfs-poller` Cloud Run + `gbfs-poller-cron` Scheduler (5-min cron, OIDC auth) replaces Dataflow at zero always-free-tier cost; BQ DAY-partitioned (7-day TTL) *(Sprint 1)*
+- [x] Hourly reactive weather refresh — `weatherTimer` `reactiveTimer`; sinusoidal diurnal variation (±5°C TEMPERATURE, ±8pp HUMIDITY) in demo fallback *(Sprint 2)*
+- [x] Reactive data-source footer + chart subtitles — `build_data_source_footer()` / `build_data_source_subtitle_line()` in `server_helpers.R` *(Sprint 3 — B3)*
+- [x] Engine indicator on bike demand chart subtitle — `build_engine_subtitle_line()` reads `USE_FASTAPI` env var *(Sprint 3 — C1)*
+- [x] Linear humidity smoother — `stat_smooth(method='lm')` replaces `poly(4)`; subtitle updated *(Sprint 3 — C2)*
+- [x] Derived stat-card counts — `count_unique_cities()` + `FORECAST_HOURS_CONSTANT` replace hardcoded values *(Sprint 3 — C3)*
+- [x] Per-city quantile demand thresholds — city-specific q33/q67 per `group_by(CITY_ASCII)` replace global 1,000 / 3,000 fixed thresholds *(Sprint 3 — C4)*
+- [x] Operator alert rewrite — `compute_operator_alert_level()` with zero-bike-station % logic; demand framed as capacity-planning context *(Sprint 3 — C5)*
+- [x] CSV download: timestamped filename + 4-row `#`-prefixed metadata header; `WIND_SPEED` column restored; `quote=FALSE` for pandas compatibility *(Sprint 3 — C6)*
+- [x] testthat suite extended to 74 tests / 116 assertions across 8 test files *(Sprint 3)*
+
 ### 🔮 Backlog — Priority Ordered
 
 - [x] Washington DC added — Capital Bikeshare GBFS v2, RF model RMSE 119.31 bikes/hr
 - [x] ~~**Priority 4**~~ — Train Paris + Chicago RF models (v1.4.0) ✅ Shipped 2026-05-18
-- [x] ~~**Priority 5**~~ — testthat suite (36 tests / 62 assertions at v1.5.0 ship; 51/89 today after Sprint 2–3 added diurnal variation + B3 data_source + C4 quantile threshold tests) covering model_prediction.R, server_helpers.R, gbfs_client.R, bigquery_client.R + GitHub Actions CI ✅ Shipped 2026-05-19 (v1.5.0)
+- [x] ~~**Priority 5**~~ — testthat suite (36 tests / 62 assertions at v1.5.0 ship; 74 tests / 116 assertions today after Sprint 2–3 extended coverage across 8 test files) covering model_prediction.R, server_helpers.R, gbfs_client.R, bigquery_client.R + GitHub Actions CI ✅ Shipped 2026-05-19 (v1.5.0); extended through v1.6.0 (2026-05-28)
 - [x] ~~**Priority 7**~~ — Seoul GBFS integration ✅ Shipped on `sample` key 2026-05-17 (commit `8682242`); full-coverage upgrade demoted 2026-05-23 to runtime `.Renviron` config — see "Optional — Seoul full-coverage upgrade" in How to Run
 - [ ] **Priority 8** — Expand to 8 cities — San Francisco (Ford GoBike) or Amsterdam (OV-fiets)
 
