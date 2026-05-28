@@ -386,8 +386,7 @@ shinyUI(
                         ),
                         
                         tags$div(class = "dash-footer",
-                                 uiOutput("data_source_footer", inline = TRUE), tags$br(),  # B3: reactive source claim
-                                 "IBM Data Analytics Capstone"
+                                 uiOutput("data_source_footer", inline = TRUE)  # B3: reactive source claim
                         )
                         
                ),  # end dash-left

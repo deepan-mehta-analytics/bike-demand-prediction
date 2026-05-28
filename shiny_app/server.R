@@ -922,13 +922,15 @@ shinyServer(function(input, output, session) {
         tags$strong(scales::comma(fleet$total_bikes)), " bikes available across ",
         tags$strong(fleet$n_stations), " stations"
       ),
-      tags$div(class = "progress", style = "margin-bottom:4px; height:20px;",  # Bootstrap 3 progress container
+      tags$div(class = "progress", style = "margin-bottom:2px; height:16px;",  # Bootstrap 3 progress container
         tags$div(
           class = paste("progress-bar", bar_class),                       # Yeti contextual colour applied here
           role  = "progressbar",
-          style = paste0("width:", fill_pct, "%; line-height:20px; font-size:12px;"),
-          paste0(fill_pct, "% fleet capacity")                            # readable label inside the bar
+          style = paste0("width:", fill_pct, "%;")                        # width only — label moved outside
         )
+      ),
+      tags$p(style = "font-size:11px; color:#555; margin-bottom:4px;",
+        paste0(fill_pct, "% fleet capacity")                              # label below bar — always readable
       ),
       tags$p(style = "font-size:11px; color:#888; margin:0;",
         scales::comma(fleet$total_docks), " dock spaces free"

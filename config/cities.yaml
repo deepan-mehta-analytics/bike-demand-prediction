@@ -72,8 +72,8 @@ cities:
     country: "France"                                     # country display name
     iso2: "FR"                                            # ISO 3166-1 alpha-2 code
     timezone: "Europe/Paris"                              # IANA timezone identifier
-    gbfs_autodiscovery: "https://velib-metropole-opendata.smovengo.fr/opendata/Velib_Metropole/gbfs.json"
-    live_station_api: "https://velib-metropole-opendata.smovengo.fr/opendata/Velib_Metropole/station_status.json"
+    gbfs_autodiscovery: "https://velib-metropole-opendata.smovengo.cloud/opendata/Velib_Metropole/gbfs.json"
+    live_station_api: "https://velib-metropole-opendata.smovengo.cloud/opendata/Velib_Metropole/station_status.json"
     live_api_key_env: null                                # Vélib' GBFS is fully public
     bigquery_dataset: null                                # no BigQuery public dataset for Paris
     bigquery_project: null                                # BQ project (null = not applicable)

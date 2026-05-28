@@ -65,8 +65,8 @@ CITY_GBFS_CONFIG <- list(                                           # named list
 
   "Paris" = list(                                                   # Vélib' Métropole GBFS v2
     type       = "gbfs",                                            # standard GBFS parser
-    info_url   = "https://velib-metropole-opendata.smovengo.fr/opendata/Velib_Metropole/station_information.json",
-    status_url = "https://velib-metropole-opendata.smovengo.fr/opendata/Velib_Metropole/station_status.json"
+    info_url   = "https://velib-metropole-opendata.smovengo.cloud/opendata/Velib_Metropole/station_information.json",
+    status_url = "https://velib-metropole-opendata.smovengo.cloud/opendata/Velib_Metropole/station_status.json"
   ),
 
   "Chicago" = list(                                                 # Divvy (Lyft) GBFS v2
