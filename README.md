@@ -79,9 +79,33 @@ Knowing when *not* to use the heavy tool — and being able to justify the switc
 
 ## 🎯 Business Problem
 
-> How can weather and time-of-day patterns be used to forecast hourly bike-sharing demand, enabling operators to pre-position bikes, balance station inventory, and reduce rebalancing costs across global city networks?
+> **The IBM Capstone question:** How can weather and time-of-day patterns be used to forecast hourly bike-sharing demand, enabling operators to pre-position bikes, balance station inventory, and reduce rebalancing costs?
 
-The R / IBM Capstone pipeline learns from the UCI Seoul Bike Sharing dataset — 8,760 hourly observations (Jan 2017 – Nov 2018) combining weather measurements with ridership counts (see Dataset section). The production Python inference service (FastAPI repo `v4.3.0`) trains the Seoul model on a refreshed source — OA-15182 from the Seoul Open Data Plaza (Jan 2022 – Dec 2024, 26,303 hourly rows joined with Open-Meteo historical weather, shipped in Python `v4.2.0`) — and the Paris model on Vélib' Métropole data aligned to Paris-local time with the 2022 export dropped as a data-quality gate (Python `v4.3.0`). The dashboard generalises city-native RF models to five peer cities (London, NYC, DC, Paris, Chicago) via live weather forecasts.
+That was the starting point — one city (Seoul), one statistical model, one academic exercise grounded in the UCI Bike Sharing dataset (8,760 hourly observations, Jan 2017 – Nov 2018). The system grew into a live six-city production dashboard, and the business problem grew with it. Three distinct questions emerged:
+
+---
+
+**Problem 1 — City-native demand forecasting**
+
+> A single proxy model applied to all cities is not a product — it is a placeholder. Each city has a distinct ridership culture, GBFS data quality, and weather sensitivity profile. Can city-specific models trained on city-native open data produce accurate 24-hour demand forecasts, city by city?
+
+Answering this required sourcing and training on city-native datasets for each market: Seoul (Seoul Open Data Plaza OA-15182, 26,303 rows, 2022–2024), Paris (Vélib' Métropole open data, 17,539 rows, 2023–2024), Chicago (Divvy quarterly CSVs, 32,720 rows, 2019–2022), plus GBFS-aligned data for London, NYC, and Washington DC. The Paris model also required a data-quality gate — the 2022 source export showed aggregation anomalies inconsistent with 2023–2024 patterns and was dropped. These are not configuration choices; they are data engineering decisions that directly affect model accuracy. (See Dataset and Model Summary sections for full detail.)
+
+---
+
+**Problem 2 — Real-time operational intelligence for two user roles**
+
+> Operators need to know *today* which stations will run empty and when to dispatch rebalancing trucks. Riders need to know *now* whether it is worth walking to a station — given both live availability and the forecast demand trend. A static model output answers neither question.
+
+This required two Shiny use-case tabs built on top of the demand forecast. The **Operator tab** compares predicted 24-hour demand against live GBFS station capacity, identifies stations at risk of hitting zero bikes, and flags when fill rate is critically low — turning a model score into a dispatch decision. The **Rider tab** computes an availability score for the next three hours, surfaces a best-time-to-ride recommendation, and delivers a natural-language summary — turning the same model output into a plain-English answer a rider can act on without reading a chart.
+
+---
+
+**Problem 3 — Live data infrastructure at zero operational cost**
+
+> How do you keep a dashboard live with real GBFS station snapshot data — refreshing on a 5-minute cadence across six cities — without incurring cloud infrastructure costs that would make the system impractical to run?
+
+The original answer was Apache Beam / Dataflow: a managed streaming service with Pub/Sub ingestion and windowed aggregations. It worked, but the workload is fundamentally a polling job, not a continuous stream — Dataflow was the wrong tool, and it consumed paid GCP resources unnecessarily. The production answer is a lightweight Cloud Run FastAPI poller triggered by Cloud Scheduler every 5 minutes, loading aggregated snapshots into BigQuery via load jobs (unconditionally free at this volume, unlike streaming inserts). The GCP Stream tab in the Shiny dashboard surfaces the result. See the Quick Summary above for the full redesign rationale.
 
 ---
 
