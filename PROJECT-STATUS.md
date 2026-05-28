@@ -11,7 +11,7 @@ Both repos form a single portfolio system. Track them together here.
 
 | Repo | Role | Current Phase | Status | Last Commit |
 |------|------|--------------|--------|-------------|
-| **bike_demand_prediction** (this repo) | R Shiny dashboard | **v1.6.0 SHIPPED 2026-05-28** — Sprint 1 (Cloud Run poller) + Sprint 2 (hourly reactive refresh + diurnal demo) + Sprint 3 (7 honesty fixes: B3 reactive footer, C1 engine indicator, C2 linear smoother, C3 derived stat-cards, C4 per-city quantile thresholds, C5 operator alert rewrite, C6 CSV metadata) + WIND_SPEED hotfix (`75f1022`); 74 tests / 116 assertions across 8 test files | ✅ Done | `0528dea` |
+| **bike_demand_prediction** (this repo) | R Shiny dashboard | **v1.6.0 SHIPPED 2026-05-28** — Sprint 1 (Cloud Run poller) + Sprint 2 (hourly reactive refresh + diurnal demo) + Sprint 3 (7 honesty fixes: B3 reactive footer, C1 engine indicator, C2 linear smoother, C3 derived stat-cards, C4 per-city quantile thresholds, C5 operator alert rewrite, C6 CSV metadata) + WIND_SPEED hotfix (`75f1022`); 74 tests / 116 assertions across 8 test files | ✅ Done | `c74b28c` |
 | **bike-demand-ml-system** | Python FastAPI + ML training | **v3.1.0 shipped (2026-05-25)** — `gbfs-poller` Cloud Run + `gbfs-poller-cron` Scheduler + BQ 7-day partitions, replacing the v3.0.0 Dataflow path at zero always-free-tier cost (joint cross-repo work tracked as Shiny v1.6.0 Sprint 1). v4.3.0 was Paris tz fix; v4.4.0 drift monitoring in design | ✅ Done | `7625f17` |
 
 ### Trained City Models (Python repo)
