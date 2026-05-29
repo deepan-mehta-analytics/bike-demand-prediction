@@ -4,28 +4,31 @@
 
 ## ⚡ Quick Summary
 
-This project is a full-stack predictive analytics system for bike-sharing demand forecasting, built across R and Python as part of the IBM Applied Data Science Capstone. It covers the complete data science lifecycle — raw Seoul ridership data through ETL, SQL-based EDA, six-model regression benchmarking, a deployed inference API, and a live Shiny dashboard serving real-time 24-hour forecasts for six global cities.
+This project started as an **IBM Applied Data Science Capstone submission** — Seoul ridership data, six regression models, a graded R notebook. It didn't stop there. Across six shipped versions it grew, one deliberate engineering layer at a time, into a production-grade, full-stack predictive analytics system. The capstone scaffold is still in the repo. The system that grew around it is what a recruiter should read.
 
-**What was built:**
+**What it became — across six shipped versions**
 
-- **R modelling pipeline** — six model classes benchmarked on a chronological 80/20 held-out split (Baseline OLS → Ridge → Lasso → Elastic Net → Random Forest). Best result: **R² = 0.730 / RMSE = 333.89 bikes/hr** — a 39% improvement over the baseline. City-specific Random Forest models trained for Paris (Vélib' Métropole, RMSE 20.51 bikes/hr) and Chicago (Divvy, RMSE 202.99 bikes/hr) alongside Seoul, London, NYC, and Washington DC.
-- **Python FastAPI inference service** — per-city RF models served via a `/predict` endpoint on GCP Cloud Run; live OpenWeather 5-day forecasts routed through city-native models for all six cities. Docker Compose runs the full Shiny + FastAPI stack locally.
-- **Bikecast Shiny dashboard** — interactive Leaflet map with colour-coded demand markers and demand-band filtering; city drill-down with GBFS live station availability; Operator tab (fleet rebalancing alerts, demand vs. capacity); Rider tab (availability score, best-time recommendation); GCP Stream tab with live BigQuery data; and a real-time Feed Health panel per city.
+- **R modelling pipeline** — six regression classes benchmarked on a chronological 80/20 split (OLS → Ridge → Lasso → Elastic Net → Random Forest); best result **R² 0.730 / RMSE 333.89 bikes/hr**, a 39% gain over baseline; per-city RF models for all six cities, including Paris (Vélib' Métropole, RMSE 20.51) and Chicago (Divvy, RMSE 202.99).
+- **Python FastAPI inference service** — per-city RF models served via a `/predict` endpoint on GCP Cloud Run, fed by live OpenWeather 5-day forecasts; full Shiny + FastAPI stack runs locally via Docker Compose.
+- **Bikecast Shiny dashboard** — Leaflet map with colour-coded demand markers and band filtering; city drill-down with GBFS live station data; Operator tab (fleet rebalancing alerts), Rider tab (availability score + best-time), GCP Stream tab (live BigQuery), and per-city Feed Health panel.
+- **CI-enforced test suite** — 74 tests / 116 assertions across 8 test files, HTTP layer stubbed via `mockery`, enforced on every push via GitHub Actions.
 
-**A GCP streaming pipeline redesign worth noting:**
+**Engineering choices that signal the skills**
 
-The live station data pipeline shipped first as **Apache Beam / Dataflow** — a managed streaming service with Pub/Sub ingestion and windowed aggregations. After running it in production, the architecture was rebuilt in Python v3.1.0:
+The version history isn't just feature additions. Two decisions in particular show judgment beyond "make it work":
 
-- **Why Dataflow was the wrong tool:** It is designed for large-scale continuous streams. Polling six GBFS city endpoints every five minutes is fundamentally a cron job — Dataflow was consuming paid GCP resources for a workload that does not need its machinery.
-- **What replaced it:** A FastAPI service on **Cloud Run**, triggered every five minutes by **Cloud Scheduler** with OIDC authentication. It polls each GBFS feed, aggregates station snapshots, and loads results to BigQuery via load jobs — which are unconditionally free at this request volume, unlike streaming inserts (1 GB/month free-tier cap).
-- **Infrastructure right-sizing:** The BigQuery table was redesigned with DAY partitioning and a 7-day TTL, matched to the actual query patterns used in the Shiny app (2-hour and 24-hour rolling windows) and sized to stay well within the 10 GB always-free storage tier.
-- **Outcome:** The same live data appears in the GCP Stream tab. Zero always-free-tier cost. No Dataflow job monitoring, no Beam pipeline overhead, significantly simpler ops.
+*GCP pipeline right-sizing (v3.1.0 ML):* The live station data pipeline first shipped as **Apache Beam / Dataflow** — managed streaming, Pub/Sub ingestion, windowed aggregations. After running it in production, it was rebuilt:
 
-Knowing when *not* to use the heavy tool — and being able to justify the switch with cost, complexity, and operational evidence — is the engineering judgment this redesign demonstrates.
+- **Why Dataflow was wrong** — it is designed for large-scale continuous streams; polling six GBFS endpoints every five minutes is fundamentally a cron job. Dataflow was burning paid GCP resources on a workload that never needed its machinery.
+- **What replaced it** — a **Cloud Run** service triggered by **Cloud Scheduler** (5-min cron, OIDC auth), loading station snapshots to BigQuery via load jobs — unconditionally free at this volume, unlike streaming inserts.
+- **Right-sizing** — the BigQuery table uses DAY partitioning and a 7-day TTL, matched to the Shiny app's 2-hour and 24-hour rolling query windows.
+- **Outcome** — the same live data in the GCP Stream tab, **zero always-free-tier cost**, no Beam pipeline, no job monitoring.
 
-**v1.6.0 is the current shipped version.** Three sprints of dashboard honesty fixes ensure every chart subtitle, stat card, operator alert, and CSV export reports exactly what data is driving it — no hard-coded claims, no stale framing. The `testthat` suite enforces **74 tests / 116 assertions across 8 test files** on every push via GitHub Actions CI.
+Knowing when *not* to reach for the managed service — and justifying the switch with cost and operational evidence — is the engineering judgment this demonstrates.
 
-### End-to-end ML pipeline: raw Seoul data → six competing models → live global demand forecast
+*Dashboard honesty sprint (v1.6.0):* Three sprints of fixes ensure every chart subtitle, stat card, operator alert, and CSV export reports exactly what data is driving it — no hard-coded claims, no stale framing. The `testthat` suite enforces this contract on every push via CI.
+
+### Capstone origin. Production-grade evolution. The version history is the portfolio.
 
 ---
 
