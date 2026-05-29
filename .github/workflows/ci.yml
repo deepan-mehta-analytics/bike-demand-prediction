@@ -23,6 +23,7 @@ on:
 # so bumping R version touches one line instead of six.
 env:
   R_VERSION: "4.4.3"                                       # must match renv.lock; used by r-check and testthat
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true                 # force Node.js 24 for all sub-actions (including r-lib internals); pre-empts June 2 cutover
 
 jobs:
 
