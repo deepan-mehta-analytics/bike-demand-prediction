@@ -36,7 +36,7 @@ Knowing when *not* to reach for the managed service — and justifying the switc
 
 [![CI](https://github.com/deepan-mehta-analytics/bike-demand-prediction/actions/workflows/ci.yml/badge.svg)](https://github.com/deepan-mehta-analytics/bike-demand-prediction/actions/workflows/ci.yml)
 ![R](https://img.shields.io/badge/R-276DC3?style=for-the-badge&logo=r&logoColor=white)
-![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 ![Shiny](https://img.shields.io/badge/Shiny-1F77B4?style=for-the-badge)
 ![Machine Learning](https://img.shields.io/badge/Machine%20Learning-Regression-orange?style=for-the-badge)
 ![Status](https://img.shields.io/badge/v1.1-Released-success?style=for-the-badge)
@@ -725,6 +725,10 @@ The capstone presentation covers the full pipeline from data collection through 
 
 ## 📂 Dataset
 
+The project started with one dataset and grew to six as the system expanded from capstone to production. Each city required its own source, schema alignment, and data-quality decisions.
+
+### Capstone origin — Seoul (UCI)
+
 | Attribute | Detail |
 |-----------|--------|
 | **Name** | Seoul Bike Sharing Demand |
@@ -736,6 +740,17 @@ The capstone presentation covers the full pipeline from data collection through 
 | **License** | Creative Commons Attribution 4.0 |
 
 Sathishkumar V.E., Park J., Cho Y. (2020). *Using data mining techniques for bike sharing demand prediction in metropolitan city.* Computer Communications, 153, 353–366.
+
+### Production city datasets
+
+| City | Source | Records | Period | Notes |
+|------|--------|---------|--------|-------|
+| **Seoul** | Seoul Open Data Plaza OA-15182 + Open-Meteo | 26,303 hourly rows | 2022–2024 | Replaces UCI baseline for the Python RF model (v4.2.0); public download, no auth |
+| **Paris** | Vélib' Métropole open data + Open-Meteo | 17,539 hourly rows | 2023–2024 | 2022 export dropped as data-quality gate (aggregation anomaly vs 2023–2024; reversible) |
+| **Chicago** | Divvy quarterly trip CSVs + Open-Meteo | 32,720 hourly rows | 2019–2022 | Trip-level CSVs aggregated to hourly station demand |
+| **New York** | BigQuery `new_york_citibike` + Open-Meteo | 2014–2018 | Public dataset | Fetched via `data/fetch_nyc_weather.py`; RMSE 470.76 bikes/hr |
+| **Washington DC** | Capital Bikeshare trip CSVs + Open-Meteo | 37,663 hourly rows | 2014–2018 | Aggregated via `data/fetch_dc_weather.py`; RMSE 119.31 bikes/hr |
+| **London** | Kaggle TfL cycling + Open-Meteo | — | — | Prepared via `data/prepare_city_data.py`; RMSE 316.56 bikes/hr |
 
 ---
 
