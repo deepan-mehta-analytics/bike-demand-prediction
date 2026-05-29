@@ -203,7 +203,7 @@ This separation reflects real-world machine learning workflows, where experiment
 
 ## 📊 Dashboard Preview
 
-> 💡 Click any screenshot to enlarge it — GitHub opens a zoom overlay in place.
+> 💡 Right-click any screenshot → **Open image in new tab** to view full size.
 
 ### 🌍 Global Demand Overview
 ![Overview Map](results/screenshots/dashboard_overview.png)
