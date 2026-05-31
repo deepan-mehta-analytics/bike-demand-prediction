@@ -23,3 +23,6 @@ notebooklm/
 # Local-dev copies of data files (Dockerfile copies these at build time; not needed in git)
 shiny_app/model.csv
 shiny_app/selected_cities.csv
+
+# internal planning artifacts
+docs/superpowers/
