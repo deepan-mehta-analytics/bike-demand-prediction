@@ -543,7 +543,7 @@ docker build -f Dockerfile.shiny -t bikecast-shiny:latest .
 docker run -p 3838:3838 \
   -e OPENWEATHER_KEY=your_actual_key_here \
   -e USE_FASTAPI=true \
-  -e FASTAPI_URL=https://bike-demand-api-246440913351.us-central1.run.app \
+  -e FASTAPI_URL=https://bike-demand-api-76372oragq-uc.a.run.app \
   bikecast-shiny:latest
 ```
 
