@@ -561,7 +561,7 @@ SEOUL_API_KEY=your_actual_seoul_key_here
 
 Restart the Shiny app to pick up the new key. This is a runtime config change — no version bump, no code release, no Docker rebuild.
 
-> Note: the ML training pipeline (`bike-demand-ml-system` repo, Python `v4.2.0`) uses Seoul OA-15182 historical data from the same `data.seoul.go.kr` platform, but as a **public dataset download** that requires no authentication. The `SEOUL_API_KEY` here is only for the live-station endpoint.
+> Note: the ML training pipeline (`bike-demand-ml-system` repo, Python `v4.4.0`) uses Seoul OA-15182 historical data from the same `data.seoul.go.kr` platform, but as a **public dataset download** that requires no authentication. The `SEOUL_API_KEY` here is only for the live-station endpoint.
 
 ---
 
@@ -745,7 +745,7 @@ Sathishkumar V.E., Park J., Cho Y. (2020). *Using data mining techniques for bik
 
 | City | Source | Records | Period | Notes |
 |------|--------|---------|--------|-------|
-| **Seoul** | Seoul Open Data Plaza OA-15182 + Open-Meteo | 26,303 hourly rows | 2022–2024 | Replaces UCI baseline for the Python RF model (v4.2.0); public download, no auth |
+| **Seoul** | Seoul Open Data Plaza OA-15182 + Open-Meteo | 26,303 hourly rows | 2022–2024 | Replaces UCI baseline for the Python RF model (v4.4.0); public download, no auth |
 | **Paris** | Vélib' Métropole open data + Open-Meteo | 17,539 hourly rows | 2023–2024 | 2022 export dropped as data-quality gate (aggregation anomaly vs 2023–2024; reversible) |
 | **Chicago** | Divvy quarterly trip CSVs + Open-Meteo | 32,720 hourly rows | 2019–2022 | Trip-level CSVs aggregated to hourly station demand |
 | **New York** | BigQuery `new_york_citibike` + Open-Meteo | 2014–2018 | Public dataset | Fetched via `data/fetch_nyc_weather.py`; RMSE 470.76 bikes/hr |
