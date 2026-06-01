@@ -26,3 +26,6 @@ shiny_app/selected_cities.csv
 
 # internal planning artifacts
 docs/superpowers/
+
+# internal status doc — local reference only, not for public repo
+PROJECT-STATUS.md
