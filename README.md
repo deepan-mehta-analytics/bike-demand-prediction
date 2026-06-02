@@ -756,7 +756,7 @@ The capstone presentation covers the full pipeline from data collection through 
 ### ✅ v1.7.0 — Released (2026-06-02)
 
 - [x] shinytest2 AppDriver golden-path suite — 4 `AppDriver` browser-level integration tests (demo-mode boot, city-selector reactive chain, demo city count, Leaflet map render) in `tests/testthat/test-shinytest2-golden-path.R`; skip guard auto-skips without Chrome *(Sprint 2)*
-- [x] Dedicated `shinytest2` CI job (5th job) — Chromium via apt, `CHROMOTE_CHROME` + `CHROMOTE_CHROME_ARGS` env vars; runs after `testthat`, parallel with Docker build; all 5 CI jobs green *(Sprint 2)*
+- [x] Dedicated `shinytest2` CI job (5th job) — Chromium via apt, `CHROMOTE_CHROME=/usr/bin/chromium-browser` env var; runs after `testthat`, parallel with Docker build; all 5 CI jobs green *(Sprint 2)*
 - [x] `## ⚙️ Production Readiness` README section — documents deployed infrastructure and the engineering scaling path *(Sprint 2)*
 
 ### 🔮 Backlog — Priority Ordered
