@@ -264,7 +264,8 @@ jobs:
 
     env:
       CHROMOTE_CHROME: /usr/bin/chromium-browser           # explicit path — chromote auto-detect misses apt package
-      CHROMOTE_CHROME_ARGS: "--no-sandbox --disable-dev-shm-usage"   # required flags for headless in sandboxed CI
+      # Note: --no-sandbox and --disable-dev-shm-usage are added automatically by
+      # chromote when CI=true (GitHub Actions sets this env var). No extra args needed.
 
     steps:
       - name: Checkout repository

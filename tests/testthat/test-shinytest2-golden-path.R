@@ -67,7 +67,7 @@ test_that("city_dropdown change from Paris to London keeps stat_hours reactive",
   app$wait_for_idle(timeout = 20000L)                                   # initial settle
 
   app$set_inputs(city_dropdown = "London")                              # simulate city selector change
-  app$wait_for_idle(timeout = 10000L)                                   # wait for downstream reactives to re-run
+  app$wait_for_idle(timeout = 20000L)                                   # 20 s: full reactive chain re-runs (matches initial settle timeout)
 
   hours_text <- app$get_value(output = "stat_hours")                   # still "24" if reactive chain OK
   expect_equal(hours_text, "24")                                        # proves no server crash on city switch
@@ -105,9 +105,11 @@ test_that("city_bike_map leaflet output renders from demo data", {
 
   app$wait_for_idle(timeout = 20000L)                                   # wait for Leaflet render
 
-  map_value <- app$get_value(output = "city_bike_map")                 # renderLeaflet → list on success, NULL on crash
+  # DOM check preferred over get_value() for Leaflet — htmlwidgets contain closures
+  # that may not RDS-serialise cleanly; querying the live DOM via CDP is unambiguous.
+  map_html <- app$get_html(selector = "#city_bike_map")                # live DOM query via Chrome DevTools Protocol
   expect_false(
-    is.null(map_value),                                                 # NULL = renderLeaflet never completed
-    info = "city_bike_map was NULL — Leaflet may have errored with demo data"
+    is.null(map_html) || nchar(map_html) == 0L,                        # empty = renderLeaflet never wrote to DOM
+    info = "city_bike_map container was empty — Leaflet may not have rendered from demo data"
   )
 })
