@@ -11,7 +11,7 @@ This project started as an **IBM Applied Data Science Capstone submission** — 
 - **R modelling pipeline** — six regression classes benchmarked on a chronological 80/20 split (OLS → Ridge → Lasso → Elastic Net → Random Forest); best result **R² 0.730 / RMSE 333.89 bikes/hr**, a 39% gain over baseline; per-city RF models for all six cities, including Paris (Vélib' Métropole, RMSE 20.51) and Chicago (Divvy, RMSE 202.99).
 - **Python FastAPI inference service** — per-city RF models served via a `/predict` endpoint on GCP Cloud Run, fed by live OpenWeather 5-day forecasts; full Shiny + FastAPI stack runs locally via Docker Compose.
 - **Bikecast Shiny dashboard** — Leaflet map with colour-coded demand markers and band filtering; city drill-down with GBFS live station data; Operator tab (fleet rebalancing alerts), Rider tab (availability score + best-time), GCP Stream tab (live BigQuery), and per-city Feed Health panel.
-- **CI-enforced test suite** — 74 tests / 116 assertions across 8 test files, HTTP layer stubbed via `mockery`, enforced on every push via GitHub Actions.
+- **CI-enforced test suite** — 78 tests / 120 assertions across 9 test files (74/116 unit via `testthat`; 4/4 AppDriver via `shinytest2`), HTTP layer stubbed via `mockery`, enforced across two CI jobs on every push.
 
 **Engineering choices that signal the skills**
 
@@ -76,7 +76,7 @@ Knowing when *not* to reach for the managed service — and justifying the switc
 | ML inference service *(v1.1)* | Python FastAPI + scikit-learn RF | `/predict` endpoint; per-city RF models (6 cities) |
 | Streaming pipeline *(v1.2; reactivated v1.6.0)* | Cloud Run GBFS poller · Cloud Scheduler · BigQuery · bigrquery | GBFS → 5-min windowed station aggregations → Shiny GCP Stream tab |
 | Containerisation *(v1.1)* | Docker · Docker Compose · GCP Cloud Run | Reproducible local + cloud deployment |
-| Testing & CI *(v1.5)* | testthat 3.x · mockery · GitHub Actions | 116-assertion suite across 8 test files (HTTP stubbed via `mockery`); 4-job CI gate on every push and PR |
+| Testing & CI *(v1.5; extended v1.7)* | testthat 3.x · shinytest2 · mockery · GitHub Actions | 120 assertions across 9 test files (78 tests: 74 unit + 4 AppDriver); 5-job CI gate on every push and PR |
 | Development | RStudio, JupyterLab | Notebook authoring and Shiny development |
 
 ---
@@ -442,7 +442,7 @@ A professional three-column dashboard built on the **Yeti Bootswatch** theme.
 - **Chicago RF model** — city-specific Divvy model (RMSE 202.99 bikes/hr, HOUR + TEMPERATURE 0.39); replaces Seoul fallback proxy *(v1.4.0 ✅)*
 
 **Features (v1.5 — shipped):**
-- **testthat suite** — 37-test automated suite (63 assertions at v1.5.0 ship; 74 tests / 116 assertions today across 8 test files after Sprint 2–3 additions) — HTTP layer stubbed via `mockery`, enforced by GitHub Actions CI on every push and PR *(v1.5.0 ✅)*
+- **testthat suite** — 37-test automated suite (63 assertions at v1.5.0 ship; 74 tests / 116 assertions after Sprint 2–3 additions across 8 test files; 78 tests / 120 assertions total including v1.7.0 shinytest2 AppDriver suite) — HTTP layer stubbed via `mockery`, enforced by GitHub Actions CI on every push and PR *(v1.5.0 ✅)*
 
 **Features (v1.6.0 — shipped):**
 - **GCP Stream pipeline reactivated** — `gbfs-poller` FastAPI service on Cloud Run + `gbfs-poller-cron` Cloud Scheduler (5-min cron, OIDC auth) replaces the v3.0.0 Dataflow path at zero always-free-tier cost; BQ table recreated with DAY partitioning and 7-day TTL; 6,032 rows confirmed at first automated cron window *(Sprint 1 — Workstream A ✅)*
@@ -454,6 +454,10 @@ A professional three-column dashboard built on the **Yeti Bootswatch** theme.
 - **Per-city quantile demand thresholds** — demand bands (Low / Medium / High) computed as city-specific quantiles of the 24h forecast rather than global fixed values; legend updated to "bottom/middle/top third of this city's 24h forecast" *(Sprint 3 — C4 ✅)*
 - **Operator alert rewrite** — alert severity computed from zero-bike-station % thresholds (🔴 ≥ 25% zero-bike stations; 🟡 ≥ 10% zero-bike or ≤ 20% fill rate) replacing the previous demand÷capacity ratio; body references 24h peak forecast as capacity planning context only *(Sprint 3 — C5 ✅)*
 - **CSV download: timestamped filename + source metadata** — filename pattern `bike-demand-forecast-<city>-YYYYMMDD-HHMM.csv` (UTC); 4 `#`-prefixed metadata rows; column headers unquoted for pandas compatibility; `WIND_SPEED` column restored *(Sprint 3 — C6 ✅)*
+
+**Features (v1.7.0 — shipped):**
+- **shinytest2 AppDriver suite** — 4 browser-level integration tests: demo-mode boot, city-selector reactive chain, 6-city count, Leaflet map render; skip guard auto-skips without Chrome; dedicated `shinytest2` CI job (5th job) with Chromium *(Sprint 2 — v1.7.0 ✅)*
+- **Production Readiness README section** — documents deployed Cloud Run / OIDC / BQ TTL / RF models / CI / cost monitoring infrastructure and frames the next engineering scaling layer *(Sprint 2 — v1.7.0 ✅)*
 
 **Demand bands:**
 
@@ -759,7 +763,7 @@ The capstone presentation covers the full pipeline from data collection through 
 
 - [x] Washington DC added — Capital Bikeshare GBFS v2, RF model RMSE 119.31 bikes/hr
 - [x] ~~**Priority 4**~~ — Train Paris + Chicago RF models (v1.4.0) ✅ Shipped 2026-05-18
-- [x] ~~**Priority 5**~~ — testthat suite (36 tests / 62 assertions at v1.5.0 ship; 74 tests / 116 assertions today after Sprint 2–3 extended coverage across 8 test files) covering model_prediction.R, server_helpers.R, gbfs_client.R, bigquery_client.R + GitHub Actions CI ✅ Shipped 2026-05-19 (v1.5.0); extended through v1.6.0 (2026-05-28)
+- [x] ~~**Priority 5**~~ — testthat suite (36 tests / 62 assertions at v1.5.0 ship; 74 tests / 116 assertions after Sprint 2–3 across 8 test files; 78 tests / 120 assertions total after v1.7.0 shinytest2 AppDriver additions across 9 test files) covering model_prediction.R, server_helpers.R, gbfs_client.R, bigquery_client.R + GitHub Actions CI ✅ Shipped 2026-05-19 (v1.5.0); extended through v1.7.0 (2026-06-02)
 - [x] ~~**Priority 7**~~ — Seoul GBFS integration ✅ Shipped on `sample` key 2026-05-17 (commit `8682242`); full-coverage upgrade demoted 2026-05-23 to runtime `.Renviron` config — see "Optional — Seoul full-coverage upgrade" in How to Run
 - [ ] **Priority 8** — Expand to 8 cities — San Francisco (Ford GoBike) or Amsterdam (OV-fiets)
 
