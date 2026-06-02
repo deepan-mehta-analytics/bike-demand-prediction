@@ -92,7 +92,7 @@ That was the starting point — one city (Seoul), one statistical model, one aca
 
 > A single proxy model applied to all cities is not a product — it is a placeholder. Each city has a distinct ridership culture, GBFS data quality, and weather sensitivity profile. Can city-specific models trained on city-native open data produce accurate 24-hour demand forecasts, city by city?
 
-Answering this required sourcing and training on city-native datasets for each market: Seoul (Seoul Open Data Plaza OA-15182, 26,303 rows, 2022–2024), Paris (Vélib' Métropole open data, 17,539 rows, 2023–2024), Chicago (Divvy quarterly CSVs, 32,720 rows, 2019–2022), plus GBFS-aligned data for London, NYC, and Washington DC. The Paris model also required a data-quality gate — the 2022 source export showed aggregation anomalies inconsistent with 2023–2024 patterns and was dropped. These are not configuration choices; they are data engineering decisions that directly affect model accuracy. (See Dataset and Model Summary sections for full detail.)
+Answering this required sourcing and training on city-native datasets for each market: Seoul (Seoul Open Data Plaza OA-15182, 35,063 rows, 2022–2025), Paris (Vélib' Métropole open data, 17,539 rows, 2023–2024), Chicago (Divvy quarterly CSVs, 32,720 rows, 2019–2022), plus GBFS-aligned data for London, NYC, and Washington DC. The Paris model also required a data-quality gate — the 2022 source export showed aggregation anomalies inconsistent with 2023–2024 patterns and was dropped. These are not configuration choices; they are data engineering decisions that directly affect model accuracy. (See Dataset and Model Summary sections for full detail.)
 
 ---
 
@@ -745,7 +745,7 @@ Sathishkumar V.E., Park J., Cho Y. (2020). *Using data mining techniques for bik
 
 | City | Source | Records | Period | Notes |
 |------|--------|---------|--------|-------|
-| **Seoul** | Seoul Open Data Plaza OA-15182 + Open-Meteo | 26,303 hourly rows | 2022–2024 | Replaces UCI baseline for the Python RF model (v4.4.0); public download, no auth |
+| **Seoul** | Seoul Open Data Plaza OA-15182 + Open-Meteo | 35,063 hourly rows | 2022–2025 | Replaces UCI baseline for the Python RF model (v4.5.0); public download, no auth |
 | **Paris** | Vélib' Métropole open data + Open-Meteo | 17,539 hourly rows | 2023–2024 | 2022 export dropped as data-quality gate (aggregation anomaly vs 2023–2024; reversible) |
 | **Chicago** | Divvy quarterly trip CSVs + Open-Meteo | 32,720 hourly rows | 2019–2022 | Trip-level CSVs aggregated to hourly station demand |
 | **New York** | BigQuery `new_york_citibike` + Open-Meteo | 2014–2018 | Public dataset | Fetched via `data/fetch_nyc_weather.py`; RMSE 470.76 bikes/hr |
