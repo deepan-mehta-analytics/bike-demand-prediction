@@ -248,4 +248,87 @@ jobs:
           # tests/testthat.R sets cwd to shiny_app/ via rprojroot and runs test_dir().
           # CI=true is auto-set by GitHub Actions → stop_on_failure=FALSE → all failures
           # reported in one run instead of fast-failing on the first.
-          Rscript tests/testthat.R                         # full suite: 62 assertions expected
+          # shinytest2 tests in this directory carry a Chrome skip guard — they are
+          # silently skipped here (no Chromium) and run in the dedicated shinytest2 job.
+          Rscript tests/testthat.R                         # full suite; shinytest2 tests auto-skip (no Chrome)
+
+  # ── Job 5: shinytest2 AppDriver golden-path suite ───────────────────────────
+  # Runs the 4 AppDriver integration tests in test-shinytest2-golden-path.R.
+  # Requires Chromium — installed via apt before the R steps.
+  # Shares the same renv cache key as r-check + testthat (same lockfile hash).
+  # Runs after testthat passes; parallel with docker-compose-build.
+  shinytest2:
+    name: R — shinytest2 AppDriver suite                  # label shown in the Actions UI
+    runs-on: ubuntu-latest                                 # GitHub-hosted Ubuntu 24.04 runner
+    needs: [testthat]                                      # wait for unit suite to pass first
+
+    env:
+      CHROMOTE_CHROME: /usr/bin/chromium-browser           # explicit path — chromote auto-detect misses apt package
+      CHROMOTE_CHROME_ARGS: "--no-sandbox --disable-dev-shm-usage"   # required flags for headless in sandboxed CI
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6                          # clone repo at current ref
+
+      - name: Install Chromium
+        # Chromium from Ubuntu apt; explicit install so the path is predictable.
+        # CHROMOTE_CHROME env var above tells chromote exactly where to find it.
+        run: sudo apt-get update && sudo apt-get install -y chromium-browser
+
+      - name: Install system dependencies
+        uses: awalsh128/cache-apt-pkgs-action@latest       # caches .deb files; dpkg-installs on hit
+        with:
+          packages: >-
+            libcurl4-openssl-dev libssl-dev libxml2-dev
+            libfontconfig1-dev libharfbuzz-dev libfribidi-dev libfreetype6-dev
+            libpng-dev libtiff-dev libjpeg-dev
+            libudunits2-dev libgdal-dev libgeos-dev libproj-dev cmake gdal-bin
+            libx11-dev pandoc
+          version: 1.0                                     # cache-bust key; matches r-check + testthat
+
+      - name: Set up R ${{ env.R_VERSION }}
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ env.R_VERSION }}                  # workflow-level env; matches renv.lock R version
+          use-public-rspm: true                            # Posit PPM for pre-built Ubuntu binaries
+
+      - name: Cache renv packages
+        uses: actions/cache@v5                             # standard GitHub cache action
+        with:
+          path: ~/.cache/R/renv                            # renv's global package cache directory
+          key: ${{ runner.os }}-R-${{ env.R_VERSION }}-renv-3-${{ hashFiles('renv.lock') }}   # same key as r-check + testthat
+          restore-keys: ${{ runner.os }}-R-${{ env.R_VERSION }}-renv-3-
+
+      - name: Restore renv library
+        shell: bash
+        run: |
+          # Same dual-repo restore pattern as r-check and testthat jobs.
+          unset RENV_CONFIG_REPOS_OVERRIDE                               # clear PPM-only flag before R starts
+          Rscript -e "
+          source('renv/activate.R')                                     # bootstrap renv from lockfile version
+          options(repos = c(                                             # dual-repo strategy
+            PPM  = 'https://packagemanager.posit.co/cran/__linux__/noble/latest',
+            CRAN = 'https://cloud.r-project.org'
+          ))
+          renv::restore()                                               # restore all packages including shinytest2
+          "
+
+      - name: Copy model.csv into shiny_app/
+        shell: bash
+        run: |
+          # shiny_app/model.csv is gitignored; demo generator calls predict_bike_demand()
+          # which reads model.csv by relative path. Same guard as the testthat job.
+          if [ ! -s data/processed/model.csv ]; then
+            echo "::error file=data/processed/model.csv::source file missing or empty"
+            exit 1
+          fi
+          cp data/processed/model.csv shiny_app/model.csv  # bridge the gitignore for CI
+          ls -la shiny_app/model.csv                        # log file size for debugging
+
+      - name: Run shinytest2 AppDriver suite
+        shell: bash
+        run: |
+          # Same runner as the testthat job (tests/testthat.R discovers all test-*.R files).
+          # With Chromium installed + CHROMOTE_CHROME set, the skip guards in
+          # test-shinytest2-golden-path.R don't fire — the 4 AppDriver tests run.
+          Rscript tests/testthat.R                          # 4 AppDriver tests expected to run

@@ -45,6 +45,7 @@ Knowing when *not* to reach for the managed service — and justifying the switc
 ![Status](https://img.shields.io/badge/v1.4-Released-success?style=for-the-badge)
 ![Status](https://img.shields.io/badge/v1.5-Released-success?style=for-the-badge)
 ![Status](https://img.shields.io/badge/v1.6-Released-success?style=for-the-badge)
+![Status](https://img.shields.io/badge/v1.7-Released-success?style=for-the-badge)
 ![API](https://img.shields.io/badge/API-OpenWeather-blue?style=for-the-badge)
 ![IBM](https://img.shields.io/badge/IBM-Data%20Analytics%20Capstone-054ADA?style=for-the-badge&logo=ibm&logoColor=white)
 
@@ -309,10 +310,11 @@ bike-demand-prediction/
 ├── Dockerfile.shiny                            # Containerises R Shiny app (rocker/shiny:4.4.3 + renv)
 ├── docker-compose.yml                          # Orchestrates Shiny + FastAPI services locally
 │
-├── tests/                                      # ── testthat suite (v1.6.0 — 74 tests, 116 assertions, CI-enforced)
+├── tests/                                      # ── test suites (v1.7.0 — 78 tests, 120 assertions, CI-enforced)
 │   ├── testthat.R                              # Local run entrypoint: setwd(shiny_app/), test_dir()
 │   └── testthat/
 │       ├── helper-workdir.R                    # Sets cwd to shiny_app/ via rprojroot before each test file
+│       ├── test-shinytest2-golden-path.R       # 4 AppDriver tests (v1.7.0) — demo-mode boot, city selector reactive, city count, Leaflet map; skip guard fires without Chrome
 │       ├── test-model-prediction.R             # 22 test_that blocks (31 assertions) — model.csv linear regressor, demo generator, C4 quantile thresholds, WIND_SPEED schema
 │       ├── test-data-source-footer.R           # 9 test_that blocks (16 assertions) — B3 reactive footer + chart subtitle helpers
 │       ├── test-operator-alert.R               # 9 test_that blocks — C5 operator alert level (zero-bike % thresholds + data-quality variant)
@@ -568,7 +570,7 @@ Restart the Shiny app to pick up the new key. This is a runtime config change �
 
 ## 🧪 Tests
 
-The **testthat suite is shipped** (v1.5.0, extended through v1.6.0 Sprint 3): **74 tests / 116 assertions** across eight test files, enforced by the `testthat` job in GitHub Actions CI on every push and PR.
+The **testthat suite** (v1.5.0, extended through v1.6.0 Sprint 3) covers **74 tests / 116 assertions** across eight test files, enforced by the `testthat` CI job on every push. A dedicated **shinytest2 AppDriver suite** (v1.7.0) adds 4 browser-level integration tests covering demo-mode boot, reactive chain, city count, and Leaflet map render — run in a separate `shinytest2` CI job with Chromium.
 
 **Manual verification (current):**
 - **Chronological 80/20 train/test split** — time-aware holdout prevents data leakage by design
@@ -577,13 +579,18 @@ The **testthat suite is shipped** (v1.5.0, extended through v1.6.0 Sprint 3): **
 
 **Automated suite:**
 ```r
-# Run from repo root:
+# Run from repo root (unit tests only — shinytest2 skips without Chrome):
 Rscript tests/testthat.R
-# Expected last line: [ FAIL 0 | WARN 0 | SKIP 0 | PASS 116 ]
+# Expected last line: [ FAIL 0 | WARN 0 | SKIP 4 | PASS 116 ]
+
+# Run shinytest2 AppDriver tests (requires Chrome/Chromium):
+CHROMOTE_CHROME=/usr/bin/chromium-browser Rscript tests/testthat.R
+# Expected last line: [ FAIL 0 | WARN 0 | SKIP 0 | PASS 120 ]
 ```
 
 | Module | Tests | Assertions | Status | Covers |
 |--------|-------|------------|--------|--------|
+| `test-shinytest2-golden-path.R` | 4 | 4 | ✅ Shipped (v1.7.0) | AppDriver: demo-mode boot, city selector reactive chain, demo city count, Leaflet map render |
 | `test-model-prediction.R` | 22 | 31 | ✅ Shipped | `safe_val`, `calculate_bike_prediction_level`, `load_saved_model`, `predict_bike_demand`, `generate_demo_weather_data`, WIND_SPEED schema, C4 quantile thresholds |
 | `test-data-source-footer.R` | 9 | 16 | ✅ Shipped | `build_data_source_footer()`, `build_data_source_subtitle_line()` — B3 reactive footer helpers |
 | `test-operator-alert.R` | 9 | 9 | ✅ Shipped | `compute_operator_alert_level()` — C5 zero-bike % thresholds + data-quality variant |
@@ -592,6 +599,33 @@ Rscript tests/testthat.R
 | `test-download-handler.R` | 6 | 10 | ✅ Shipped | `build_csv_filename()`, `build_csv_header_block()` — C6 CSV metadata |
 | `test-gbfs-client.R` | 16 | 38 | ✅ Shipped | `%\|\|%`, `EMPTY_STATIONS_SCHEMA`, parsers, `get_city_live_stations` (HTTP-mocked via `mockery`) |
 | `test-bigquery-client.R` | 4 | 4 | ✅ Shipped | `BQ_CITY_SLUG_TO_NAME` / `BQ_CITY_NAME_TO_SLUG` lookup tables |
+
+---
+
+## ⚙️ Production Readiness
+
+The dashboard ships with a production-grade infrastructure layer built across v1.1–v1.7.0. These are not aspirational claims — each item is deployed and CI-verified.
+
+**What is production-grade today:**
+
+| Signal | Detail |
+|--------|--------|
+| **Cloud Run autoscale** | `maxScale=20`, `concurrency=80`, `min-instances=0`; startup CPU boost enabled; 300 s request timeout |
+| **OIDC keyless auth** | No stored service-account keys; GBFS poller uses workload-identity federation; kill-switch is private (invoke-only) |
+| **BigQuery 7-day TTL** | Station-snapshot partitions expire after 604,800 s — data retention is cost-bounded by design |
+| **Per-city RF models** | 6 independent Random Forest models with city-specific feature engineering; served via FastAPI on Cloud Run (RMSE: London 173, Paris 20.5, Chicago 91.4, NYC 126, DC 240, Seoul 1,386 bikes/hr) |
+| **5-job CI pipeline** | `python-check` → `r-check` → `testthat` → `shinytest2` → `docker-compose-build`; `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` at workflow level |
+| **shinytest2 AppDriver suite** | 4 `AppDriver` browser-level tests (v1.7.0): demo-mode boot, city-selector reactive chain, 6-city demo count, Leaflet map render — runs in CI with Chromium, auto-skips without it |
+| **GCP cost monitoring** | Daily Cloud Run cost-audit with Slack alerting; registry cleanup policy (keep-recent-5); billing budget alerts at ₹250/₹500/₹1,000; kill-switch chain verified end-to-end |
+| **Reproducible Docker image** | GHCR-published `Dockerfile.shiny`; `renv.lock` pins all 139 R packages; renv cache shared across 3 CI jobs |
+
+**The scaling path from here** — understood, scoped for portfolio:
+
+- **MLflow model versioning** — experiment tracking, model registry, A/B rollout gates
+- **Full reactive test suite** — `AppDriver` tests across all 6 cities and all 4 tabs (Operator, Rider, GCP Stream, Live Map)
+- **Multi-region Cloud Run** — geo-distributed deployment for sub-50 ms city-local latency
+- **Staging environment** — promotion gate between staging and production with smoke-test gate
+- **Automated retraining** — data drift detection triggering re-fit of city RF models with version bump
 
 ---
 
@@ -621,7 +655,7 @@ The capstone presentation covers the full pipeline from data collection through 
 - **IBM model scored on Track 2 test set** — RMSE 342.60, R² 0.6723; see IBM Deployed Model section for full comparison
 - **Paris RMSE (20.51 post-v4.3.0; was 23.30 in v1.4.0 baseline) uses normalised MEAN scale** — Vélib' source data reports individual station averages (~50–500 bikes/hr), not city-wide summed volume; value is correct relative to the training data distribution. The v4.3.0 refresh applied a timezone fix (Paris-local wall-clock alignment) plus a 2022 source-export drop (data-quality gate; reversible)
 - **OpenWeather free tier limits** — new API keys take up to 2 hours to activate; rate limits apply at scale
-- **Reactive logic not covered by tests** — `server.R` and `ui.R` reactive flows would require a `shinytest2` browser harness; out of scope for v1.5, candidate for a future phase. The v1.5 `testthat` suite covers pure-function modules (`model_prediction.R`, `gbfs_client.R`, `bigquery_client.R`) with HTTP layer stubbed via `mockery`
+- **Full reactive coverage not yet implemented** — `server.R` and `ui.R` reactive flows have a golden-path `shinytest2` AppDriver suite (v1.7.0: 4 tests — demo boot, city selector, city count, Leaflet map). Full multi-city, multi-tab coverage is the next testing layer (see Production Readiness — scaling path)
 - **Seoul live-station coverage is sample-key-only by default** — `shiny_app/gbfs_client.R::parse_seoul_openapi()` ships and runs on Seoul Open API's public `"sample"` key, returning 5 real stations near Mapo-gu (verified in commit `8682242`). Full ~1,471-station coverage is a `.Renviron` upgrade (`SEOUL_API_KEY=<registered_key>`) documented under "Optional — Seoul full-coverage upgrade" in How to Run — it is not a code release or backlog feature
 - **`USE_FASTAPI` is env-var controlled** — no in-app toggle (by design for Docker simplicity); flip via `USE_FASTAPI=true` to switch from the local `model.csv` linear fallback to the FastAPI per-city RF prediction service
 - **GCP Stream tab requires service-account credentials** — `GOOGLE_APPLICATION_CREDENTIALS` env var must point to a GCP service-account JSON with BigQuery Job User + Data Viewer roles; tab gracefully shows 3-step setup instructions when not set, so the rest of the app is unaffected
@@ -714,6 +748,12 @@ The capstone presentation covers the full pipeline from data collection through 
 - [x] Operator alert rewrite — `compute_operator_alert_level()` with zero-bike-station % logic; demand framed as capacity-planning context *(Sprint 3 — C5)*
 - [x] CSV download: timestamped filename + 4-row `#`-prefixed metadata header; `WIND_SPEED` column restored; `quote=FALSE` for pandas compatibility *(Sprint 3 — C6)*
 - [x] testthat suite extended to 74 tests / 116 assertions across 8 test files *(Sprint 3)*
+
+### ✅ v1.7.0 — Released (2026-06-02)
+
+- [x] shinytest2 AppDriver golden-path suite — 4 `AppDriver` browser-level integration tests (demo-mode boot, city-selector reactive chain, demo city count, Leaflet map render) in `tests/testthat/test-shinytest2-golden-path.R`; skip guard auto-skips without Chrome *(Sprint 2)*
+- [x] Dedicated `shinytest2` CI job (5th job) — Chromium via apt, `CHROMOTE_CHROME` + `CHROMOTE_CHROME_ARGS` env vars; runs after `testthat`, parallel with Docker build; all 5 CI jobs green *(Sprint 2)*
+- [x] `## ⚙️ Production Readiness` README section — documents deployed infrastructure and the engineering scaling path *(Sprint 2)*
 
 ### 🔮 Backlog — Priority Ordered
 
