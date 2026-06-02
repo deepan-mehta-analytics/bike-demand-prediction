@@ -435,6 +435,7 @@ A professional three-column dashboard built on the **Yeti Bootswatch** theme.
 - **Feed Health panel** — colour-coded sidebar panel (LIVE / DELAYED / DOWN) per city; `reactiveTimer` auto-refresh every 5 min; graceful demo fallback when `OPENWEATHER_KEY` not set *(v1.3.0 ✅)*
 
 **Features (v1.4 — shipped):**
+- **Seoul RF model** — city-specific Seoul Open Data Plaza model (RMSE 1386.77 bikes/hr post-v4.5.0; was 1503.52 on 2022–2024 baseline; OA-15182, 35,063 rows 2022–2025); served via FastAPI endpoint *(v1.4.0 ✅; refreshed in Python v4.5.0)*
 - **Paris RF model** — city-specific Vélib' Métropole model (RMSE 20.51 bikes/hr post-v4.3.0; was 23.30 in v1.4.0 baseline; HOUR 0.71); replaces Seoul fallback proxy *(v1.4.0 ✅; refreshed in Python v4.3.0)*
 - **Chicago RF model** — city-specific Divvy model (RMSE 202.99 bikes/hr, HOUR + TEMPERATURE 0.39); replaces Seoul fallback proxy *(v1.4.0 ✅)*
 
@@ -561,7 +562,7 @@ SEOUL_API_KEY=your_actual_seoul_key_here
 
 Restart the Shiny app to pick up the new key. This is a runtime config change — no version bump, no code release, no Docker rebuild.
 
-> Note: the ML training pipeline (`bike-demand-ml-system` repo, Python `v4.4.0`) uses Seoul OA-15182 historical data from the same `data.seoul.go.kr` platform, but as a **public dataset download** that requires no authentication. The `SEOUL_API_KEY` here is only for the live-station endpoint.
+> Note: the ML training pipeline (`bike-demand-ml-system` repo, Python `v4.5.0`) uses Seoul OA-15182 historical data from the same `data.seoul.go.kr` platform, but as a **public dataset download** that requires no authentication. The `SEOUL_API_KEY` here is only for the live-station endpoint.
 
 ---
 
@@ -697,6 +698,7 @@ The capstone presentation covers the full pipeline from data collection through 
 
 ### ✅ v1.4.0 — Released (2026-05-18)
 
+- [x] Seoul RF model — Seoul Open Data Plaza OA-15182 (2022–2025, 35,063 rows; refreshed in Python v4.5.0); RMSE **1386.77** bikes/hr post-v4.5.0 (was 1503.52 on 2022–2024 baseline); served via FastAPI endpoint
 - [x] Paris RF model — Vélib' Métropole open data (2023–2024, 17,539 rows; 2022 dropped in v4.3.0 as a data-quality gate); RMSE **20.51** bikes/hr post-v4.3.0 (was 23.30 in v1.4.0 baseline); HOUR (0.71) top feature; replaces Seoul fallback
 - [x] Chicago RF model — Divvy quarterly CSVs (2019–2022, 32,720 rows); RMSE **202.99** bikes/hr; HOUR + TEMPERATURE (0.39 each); replaces Seoul fallback
 
