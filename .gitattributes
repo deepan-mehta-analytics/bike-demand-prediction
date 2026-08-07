@@ -3,4 +3,4 @@
 # directory holds Python and R-kernel analysis work from the development phase.
 # Without this, 31 .ipynb files dominate and GitHub reports the repo as
 # "mostly Jupyter Notebook" — which misrepresents the delivered artefact.
-notebooks/ linguist-documentation=true
+notebooks/** linguist-documentation=true
